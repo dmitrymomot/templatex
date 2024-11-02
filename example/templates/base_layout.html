@@ -1,0 +1,14 @@
+<!doctype html>
+<html lang="en" class="h-full antialiased">
+  <head>
+    <meta charset="UTF-8" />
+    <title>{{.Title}}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+  </head>
+  <body class="h-full bg-gray-100">
+    <!-- This is where the content of the child template will be injected -->
+    {{embed}}
+    <!-- This is where the footer template will be injected -->
+    {{template "footer" .}}
+  </body>
+</html>

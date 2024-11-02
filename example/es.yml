@@ -1,0 +1,3 @@
+es:
+  welcome: "¡Bienvenido a nuestra increíble aplicación!"
+  greeting: "¡Hola, %{name}!"
