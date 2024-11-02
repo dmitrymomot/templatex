@@ -1,5 +1,14 @@
 # templatex
 
+[![GitHub tag (latest SemVer)](https://img.shields.io/github/tag/dmitrymomot/templatex)](https://github.com/dmitrymomot/templatex)
+[![Go Reference](https://pkg.go.dev/badge/github.com/dmitrymomot/templatex.svg)](https://pkg.go.dev/github.com/dmitrymomot/templatex)
+[![License](https://img.shields.io/github/license/dmitrymomot/templatex)](https://github.com/dmitrymomot/templatex/blob/main/LICENSE)
+
+[![Tests](https://github.com/dmitrymomot/templatex/actions/workflows/tests.yml/badge.svg)](https://github.com/dmitrymomot/templatex/actions/workflows/tests.yml)
+[![CodeQL Analysis](https://github.com/dmitrymomot/templatex/actions/workflows/codeql-analysis.yml/badge.svg)](https://github.com/dmitrymomot/templatex/actions/workflows/codeql-analysis.yml)
+[![GolangCI Lint](https://github.com/dmitrymomot/templatex/actions/workflows/golangci-lint.yml/badge.svg)](https://github.com/dmitrymomot/templatex/actions/workflows/golangci-lint.yml)
+[![Go Report Card](https://goreportcard.com/badge/github.com/dmitrymomot/templatex)](https://goreportcard.com/report/github.com/dmitrymomot/templatex)
+
 A flexible and powerful Go template engine with support for layouts, internationalization (i18n), and useful template functions.
 
 ## Features
