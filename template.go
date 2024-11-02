@@ -49,12 +49,23 @@ func New(root string, fns template.FuncMap) (*Engine, error) {
 		})
 
 	// Add a custom function map
-	if fns != nil && len(fns) > 0 {
+	if len(fns) > 0 {
 		tmpl = tmpl.Funcs(fns)
 	}
 
 	// Parse the templates
-	err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
+	err := filepath.Walk(root, walkFunc(tmpl, root))
+	if err != nil {
+		return nil, errors.Join(ErrTemplateParsingFailed, err)
+	}
+
+	return &Engine{templates: tmpl}, nil
+}
+
+// walkFunc is a helper function that parses a template file and adds it to the template manager.
+// It is used with filepath.Walk to parse all template files in a directory.
+func walkFunc(tmpl *template.Template, root string) filepath.WalkFunc {
+	return func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
@@ -73,12 +84,7 @@ func New(root string, fns template.FuncMap) (*Engine, error) {
 			}
 		}
 		return nil
-	})
-	if err != nil {
-		return nil, errors.Join(ErrTemplateParsingFailed, err)
 	}
-
-	return &Engine{templates: tmpl}, nil
 }
 
 // Render renders a page using the specified layout chain.
