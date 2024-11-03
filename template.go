@@ -40,13 +40,7 @@ func New(root string, fns template.FuncMap) (*Engine, error) {
 	}
 
 	// Parse the templates and add a custom function map
-	tmpl := template.New("").
-		Option("missingkey=zero").
-		Funcs(defaultFuncs()).
-		Funcs(template.FuncMap{
-			"embed": func() template.HTML { return "" },                  // placeholder function
-			"T":     func(key string, args ...any) string { return key }, // placeholder function with variadic args
-		})
+	tmpl := template.New("").Option("missingkey=zero").Funcs(defaultFuncs())
 
 	// Add a custom function map
 	if len(fns) > 0 {
@@ -96,7 +90,10 @@ func (tm *Engine) Render(ctx context.Context, out io.Writer, name string, bindin
 	var buf bytes.Buffer
 
 	// Get the locale from the context
-	tm.templates.Funcs(template.FuncMap{"T": getTranslator(ctx)})
+	tm.templates.Funcs(template.FuncMap{
+		"T":      getTranslator(ctx),
+		"ctxVal": ctxValue(ctx),
+	})
 
 	// Render the base content (e.g., contacts.html) into a buffer.
 	err = tm.templates.ExecuteTemplate(&buf, name, binding)

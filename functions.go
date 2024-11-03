@@ -37,6 +37,18 @@ func getTranslator(ctx context.Context) func(string, ...string) string {
 	}
 }
 
+// ctxValue returns the value of a key from a context
+// It returns an empty string if the key doesn't exist
+// It's useful for getting values from a context in a template
+func ctxValue(ctx context.Context) func(key string) string {
+	return func(key string) string {
+		if v := ctx.Value(key); v != nil {
+			return fmt.Sprint(v)
+		}
+		return "" // Default if key doesn't exist
+	}
+}
+
 // safeField returns the value of a field from a struct if it exists and is accessible
 func safeField(data interface{}, field string) string {
 	v := reflect.ValueOf(data)
@@ -108,5 +120,11 @@ func defaultFuncs() template.FuncMap {
 			return template.HTML(html)
 		},
 		"safeField": safeField,
+
+		// Placeholders for context-related functions.
+		// These should be replaced with actual functions in your application
+		"embed":  func() template.HTML { return "" },                  // placeholder function
+		"T":      func(key string, args ...any) string { return key }, // placeholder function with variadic args
+		"ctxVal": func(key string) string { return "" },
 	}
 }
