@@ -39,6 +39,11 @@ func New(root string, fns template.FuncMap) (*Engine, error) {
 		return nil, ErrNoTemplateDirectory
 	}
 
+	// Check if directory exists
+	if _, err := os.Stat(root); os.IsNotExist(err) {
+		return nil, errors.Join(ErrNoTemplateDirectory, fmt.Errorf("template directory does not exist: %s", root))
+	}
+
 	// Parse the templates and add a custom function map
 	tmpl := template.New("").Option("missingkey=zero").Funcs(defaultFuncs())
 
@@ -51,6 +56,11 @@ func New(root string, fns template.FuncMap) (*Engine, error) {
 	err := filepath.Walk(root, walkFunc(tmpl, root))
 	if err != nil {
 		return nil, errors.Join(ErrTemplateParsingFailed, err)
+	}
+
+	// Verify that at least one template was parsed
+	if tmpl.Templates() == nil {
+		return nil, ErrNoTemplatesParsed
 	}
 
 	return &Engine{templates: tmpl}, nil
@@ -72,9 +82,26 @@ func walkFunc(tmpl *template.Template, root string) filepath.WalkFunc {
 			}
 			relPath = strings.ReplaceAll(relPath, string(os.PathSeparator), "/")
 
-			// Parse the file and name it with the relative path
-			if _, err = tmpl.New(relPath).ParseFiles(path); err != nil {
+			// Read the content of the file
+			content, err := os.ReadFile(path)
+			if err != nil {
 				return err
+			}
+
+			// Check if the file contains any {{define}} blocks
+			if bytes.Contains(content, []byte("{{define")) {
+				// Parse the file directly if it contains define blocks
+				_, err = tmpl.ParseFiles(path)
+				if err != nil {
+					return err
+				}
+			} else {
+				// If no define blocks, create a new template with the file name
+				// and parse the content
+				_, err = tmpl.New(relPath).Parse(string(content))
+				if err != nil {
+					return err
+				}
 			}
 		}
 		return nil
@@ -83,6 +110,10 @@ func walkFunc(tmpl *template.Template, root string) filepath.WalkFunc {
 
 // Render renders a page using the specified layout chain.
 func (tm *Engine) Render(ctx context.Context, out io.Writer, name string, binding interface{}, layouts ...string) error {
+	if tm == nil || tm.templates == nil {
+		return ErrTemplateEngineNotInitialized
+	}
+
 	tm.mu.RLock()
 	defer tm.mu.RUnlock()
 
