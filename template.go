@@ -34,7 +34,7 @@ type Engine struct {
 }
 
 // New initializes a TemplateManager by parsing templates from a glob pattern and adding custom function maps.
-func New(root string, fns template.FuncMap) (*Engine, error) {
+func New(root string, fns template.FuncMap, exts ...string) (*Engine, error) {
 	if root == "" {
 		return nil, ErrNoTemplateDirectory
 	}
@@ -53,8 +53,10 @@ func New(root string, fns template.FuncMap) (*Engine, error) {
 	}
 
 	// Parse the templates
-	err := filepath.Walk(root, walkFunc(tmpl, root))
-	if err != nil {
+	if len(exts) == 0 {
+		exts = []string{".html"}
+	}
+	if err := filepath.Walk(root, walkFunc(tmpl, root, exts)); err != nil {
 		return nil, errors.Join(ErrTemplateParsingFailed, err)
 	}
 
@@ -68,13 +70,24 @@ func New(root string, fns template.FuncMap) (*Engine, error) {
 
 // walkFunc is a helper function that parses a template file and adds it to the template manager.
 // It is used with filepath.Walk to parse all template files in a directory.
-func walkFunc(tmpl *template.Template, root string) filepath.WalkFunc {
+func walkFunc(tmpl *template.Template, root string, exts []string) filepath.WalkFunc {
 	return func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
 
-		if !info.IsDir() && filepath.Ext(path) == ".html" {
+		if !info.IsDir() {
+			isValidExt := false
+			for _, ext := range exts {
+				if filepath.Ext(path) == ext {
+					isValidExt = true
+					break
+				}
+			}
+			if !isValidExt {
+				return nil
+			}
+
 			// Get the relative path and normalize it
 			relPath, err := filepath.Rel(root, path)
 			if err != nil {
