@@ -191,7 +191,7 @@ func TestTemplateWithCustomFunctions(t *testing.T) {
 		"lower": strings.ToLower,
 	}
 
-	engine, err := templatex.New("example/templates/", customFuncs)
+	_, err := templatex.New("example/templates/", customFuncs)
 	require.NoError(t, err)
 
 	// Create a test template file with custom functions
@@ -202,7 +202,7 @@ func TestTemplateWithCustomFunctions(t *testing.T) {
 	require.NoError(t, err)
 
 	// Create a new engine with the temp directory
-	engine, err = templatex.New(tempDir, customFuncs)
+	engine, err := templatex.New(tempDir, customFuncs)
 	require.NoError(t, err)
 
 	var buf bytes.Buffer
