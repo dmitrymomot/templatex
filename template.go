@@ -30,7 +30,7 @@ type RendererString interface {
 // Engine holds parsed templates and manages their rendering.
 type Engine struct {
 	templates *template.Template
-	mu        sync.RWMutex
+	mu        sync.Mutex
 }
 
 // New initializes a TemplateManager by parsing templates from a glob pattern and adding custom function maps.
@@ -127,20 +127,24 @@ func (tm *Engine) Render(ctx context.Context, out io.Writer, name string, bindin
 		return ErrTemplateEngineNotInitialized
 	}
 
-	tm.mu.RLock()
-	defer tm.mu.RUnlock()
+	tm.mu.Lock() // Changed from RLock to Lock since we're modifying the template
+	// Create a clone of the template to avoid concurrent modifications
+	tmpl, err := tm.templates.Clone()
+	tm.mu.Unlock()
+	if err != nil {
+		return errors.Join(ErrTemplateExecutionFailed, err)
+	}
 
-	var err error
-	var buf bytes.Buffer
-
-	// Get the locale from the context
-	tm.templates.Funcs(template.FuncMap{
+	// Add context-specific functions
+	tmpl = tmpl.Funcs(template.FuncMap{
 		"T":      getTranslator(ctx),
 		"ctxVal": ctxValue(ctx),
 	})
 
+	var buf bytes.Buffer
+
 	// Render the base content (e.g., contacts.html) into a buffer.
-	err = tm.templates.ExecuteTemplate(&buf, name, binding)
+	err = tmpl.ExecuteTemplate(&buf, name, binding)
 	if err != nil {
 		return errors.Join(ErrTemplateExecutionFailed, err)
 	}
@@ -153,7 +157,7 @@ func (tm *Engine) Render(ctx context.Context, out io.Writer, name string, bindin
 		buf.Reset() // Clear buffer for the next layer.
 
 		// Create a template with the embed function updated for each layer.
-		tmpl := tm.templates.Lookup(layout)
+		tmpl := tmpl.Lookup(layout)
 		if tmpl == nil {
 			return errors.Join(ErrTemplateNotFound, fmt.Errorf("layout: %s", layout))
 		}
