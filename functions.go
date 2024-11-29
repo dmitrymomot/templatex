@@ -64,7 +64,7 @@ func safeField(data interface{}, field string) string {
 // defaultFuncs returns a FuncMap with default functions
 func defaultFuncs() template.FuncMap {
 	return template.FuncMap{
-		// Add your custom functions here
+		"default": defaultValue,
 		"upper": func(s string) string {
 			return strings.ToUpper(s)
 		},
@@ -127,4 +127,56 @@ func defaultFuncs() template.FuncMap {
 		"T":      func(key string, args ...any) string { return key }, // placeholder function with variadic args
 		"ctxVal": func(key string) string { return "" },
 	}
+}
+
+// defaultValue returns the default value if the value is nil, empty, or zero.
+// Usage: {{ .Value | default "default value" }}
+func defaultValue(defaultValue, value interface{}) interface{} {
+	// Handle nil case first
+	if value == nil {
+		return defaultValue
+	}
+
+	v := reflect.ValueOf(value)
+
+	// Handle special case for pointer types
+	if v.Kind() == reflect.Ptr {
+		if v.IsNil() {
+			return defaultValue
+		}
+		v = v.Elem()
+	}
+
+	// Check for zero/empty values based on type
+	switch v.Kind() {
+	case reflect.String:
+		if strings.TrimSpace(v.String()) == "" {
+			return defaultValue
+		}
+	case reflect.Slice, reflect.Map, reflect.Array:
+		if v.Len() == 0 {
+			return defaultValue
+		}
+	case reflect.Bool:
+		if !v.Bool() {
+			return defaultValue
+		}
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		if v.Int() == 0 {
+			return defaultValue
+		}
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		if v.Uint() == 0 {
+			return defaultValue
+		}
+	case reflect.Float32, reflect.Float64:
+		if v.Float() == 0 {
+			return defaultValue
+		}
+	case reflect.Interface:
+		if v.IsNil() {
+			return defaultValue
+		}
+	}
+	return value
 }
