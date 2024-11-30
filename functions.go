@@ -13,58 +13,9 @@ import (
 	"golang.org/x/text/language"
 )
 
-// getTranslator returns a translator function from context or falls back to returning the key
-func getTranslator(ctx context.Context) func(string, ...string) string {
-	l := ctxi18n.Locale(ctx)
-	if l == nil {
-		return func(key string, args ...string) string {
-			if len(args) == 0 {
-				return key
-			}
-			anyArgs := make([]any, len(args))
-			for i, v := range args {
-				anyArgs[i] = v
-			}
-			return fmt.Sprintf(key, anyArgs...)
-		}
-	}
-	return func(s string, a ...string) string {
-		argMap := make(i18n.M, len(a)/2)
-		for i := 0; i < len(a); i += 2 {
-			argMap[a[i]] = a[i+1]
-		}
-		return l.T(s, argMap)
-	}
-}
-
-// ctxValue returns the value of a key from a context
-// It returns an empty string if the key doesn't exist
-// It's useful for getting values from a context in a template
-func ctxValue(ctx context.Context) func(key string) string {
-	return func(key string) string {
-		if v := ctx.Value(key); v != nil {
-			return fmt.Sprint(v)
-		}
-		return "" // Default if key doesn't exist
-	}
-}
-
-// safeField returns the value of a field from a struct if it exists and is accessible
-func safeField(data interface{}, field string) string {
-	v := reflect.ValueOf(data)
-	if v.Kind() == reflect.Struct {
-		f := v.FieldByName(field)
-		if f.IsValid() && f.CanInterface() {
-			return f.Interface().(string)
-		}
-	}
-	return "" // Default if field doesn't exist or isn't accessible
-}
-
 // defaultFuncs returns a FuncMap with default functions
 func defaultFuncs() template.FuncMap {
 	return template.FuncMap{
-		"default": defaultValue,
 		"upper": func(s string) string {
 			return strings.ToUpper(s)
 		},
@@ -119,6 +70,7 @@ func defaultFuncs() template.FuncMap {
 		"htmlSafe": func(html string) template.HTML {
 			return template.HTML(html)
 		},
+		"default":   defaultValue,
 		"safeField": safeField,
 
 		// Placeholders for context-related functions.
@@ -127,6 +79,57 @@ func defaultFuncs() template.FuncMap {
 		"T":      func(key string, args ...any) string { return key }, // placeholder function with variadic args
 		"ctxVal": func(key string) string { return "" },
 	}
+}
+
+// getTranslator returns a translator function from context or falls back to returning the key
+func getTranslator(ctx context.Context) func(string, ...string) string {
+	l := ctxi18n.Locale(ctx)
+	if l == nil {
+		return func(key string, args ...string) string {
+			if len(args) == 0 {
+				return key
+			}
+			anyArgs := make([]any, len(args))
+			for i, v := range args {
+				anyArgs[i] = v
+			}
+			return fmt.Sprintf(key, anyArgs...)
+		}
+	}
+	return func(s string, a ...string) string {
+		argMap := make(i18n.M, len(a)/2)
+		for i := 0; i < len(a); i += 2 {
+			argMap[a[i]] = a[i+1]
+		}
+		return l.T(s, argMap)
+	}
+}
+
+// ctxValue returns the value of a key from a context
+// It returns an empty string if the key doesn't exist
+// It's useful for getting values from a context in a template
+func ctxValue(ctx context.Context) func(key string) string {
+	return func(key string) string {
+		if v := ctx.Value(key); v != nil {
+			return fmt.Sprint(v)
+		}
+		return "" // Default if key doesn't exist
+	}
+}
+
+// safeField returns the value of a field from a struct if it exists and is accessible
+func safeField(data interface{}, field string, fallback ...string) string {
+	v := reflect.ValueOf(data)
+	if v.Kind() == reflect.Struct {
+		f := v.FieldByName(field)
+		if f.IsValid() && f.CanInterface() {
+			return f.Interface().(string)
+		}
+	}
+	if len(fallback) > 0 {
+		return fallback[0]
+	}
+	return "" // Default if field doesn't exist or isn't accessible
 }
 
 // defaultValue returns the default value if the value is nil, empty, or zero.
