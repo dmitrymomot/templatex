@@ -2,6 +2,7 @@ package templatex
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"html/template"
 	"reflect"
@@ -70,14 +71,23 @@ func defaultFuncs() template.FuncMap {
 		"htmlSafe": func(html string) template.HTML {
 			return template.HTML(html)
 		},
-		"default":   defaultValue,
-		"safeField": safeField,
+		"default":      defaultValue,
+		"safeField":    safeField,
+		"debug":        prettyPrint,
+		"boolToString": boolToString,
 
 		// Placeholders for context-related functions.
 		// These should be replaced with actual functions in your application
 		"embed":  func() template.HTML { return "" },                  // placeholder function
 		"T":      func(key string, args ...any) string { return key }, // placeholder function with variadic args
 		"ctxVal": func(key string) string { return "" },
+
+		// Component-related functions
+		"props":       Props,
+		"merge_props": MergeProps,
+		"component": func(name string, props ComponentProps) (template.HTML, error) {
+			return "", ErrTemplateEngineNotInitialized
+		},
 	}
 }
 
@@ -182,4 +192,20 @@ func defaultValue(defaultValue, value interface{}) interface{} {
 		}
 	}
 	return value
+}
+
+// prettyPrint returns a pretty-printed representation of the value
+// Usage: {{ debug .Value }}
+func prettyPrint(v interface{}) string {
+	b, err := json.MarshalIndent(v, "", "  ")
+	if err != nil {
+		return fmt.Sprintf("%+v", v)
+	}
+	return string(b)
+}
+
+// boolToString converts a boolean value to a string
+// Usage: {{ boolToString .Value }}
+func boolToString(b bool) string {
+	return fmt.Sprintf("%t", b)
 }

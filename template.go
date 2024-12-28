@@ -104,15 +104,13 @@ func walkFunc(tmpl *template.Template, root string, exts []string) filepath.Walk
 			// Check if the file contains any {{define}} blocks
 			if bytes.Contains(content, []byte("{{define")) {
 				// Parse the file directly if it contains define blocks
-				_, err = tmpl.ParseFiles(path)
-				if err != nil {
+				if _, err = tmpl.ParseFiles(path); err != nil {
 					return err
 				}
 			} else {
 				// If no define blocks, create a new template with the file name
 				// and parse the content
-				_, err = tmpl.New(relPath).Parse(string(content))
-				if err != nil {
+				if _, err = tmpl.New(relPath).Parse(string(content)); err != nil {
 					return err
 				}
 			}
@@ -139,6 +137,9 @@ func (tm *Engine) Render(ctx context.Context, out io.Writer, name string, bindin
 	tmpl = tmpl.Funcs(template.FuncMap{
 		"T":      getTranslator(ctx),
 		"ctxVal": ctxValue(ctx),
+		"component": func(name string, props ComponentProps) (template.HTML, error) {
+			return tm.componentFunc(name, props)
+		},
 	})
 
 	var buf bytes.Buffer
