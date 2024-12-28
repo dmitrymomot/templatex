@@ -1,3 +1,6 @@
 en:
-  welcome: "Welcome to our awesome app!"
+  welcome: "Welcome to our component demo!"
   greeting: "Hello, %{name}!"
+  actions:
+    submit: "Submit"
+    cancel: "Cancel"

@@ -1,0 +1,8 @@
+{{define "card"}}
+<div class="bg-white rounded-lg shadow-md p-6 {{.class}}">
+  {{if .title}}
+  <h2 class="mb-4 text-xl font-bold">{{.title}}</h2>
+  {{end}}
+  <div class="prose">{{.content}}</div>
+</div>
+{{end}}

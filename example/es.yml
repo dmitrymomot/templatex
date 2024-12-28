@@ -1,3 +1,6 @@
 es:
-  welcome: "¡Bienvenido a nuestra increíble aplicación!"
+  welcome: "¡Bienvenido a nuestra demostración de componentes!"
   greeting: "¡Hola, %{name}!"
+  actions:
+    submit: "Enviar"
+    cancel: "Cancelar"

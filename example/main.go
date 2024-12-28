@@ -20,7 +20,11 @@ func main() {
 	r := chi.NewRouter()
 	r.Use(Localization("en"))
 
-	templ, _ := templatex.New("templates/", nil)
+	// Initialize template engine with components
+	templ, err := templatex.New("templates/", nil)
+	if err != nil {
+		panic(err)
+	}
 
 	// Load translations
 	if err := ctxi18n.LoadWithDefault(translations, "en"); err != nil {
@@ -31,13 +35,21 @@ func main() {
 		data := struct {
 			Title    string
 			Username string
-			Test     string
+			Messages []string
+			Stats    map[string]int
 		}{
-			Title:    "Contacts",
+			Title:    "Component Demo",
 			Username: "John Doe",
+			Messages: []string{
+				"This is a demo message",
+				"Components make templates reusable",
+			},
+			Stats: map[string]int{
+				"visits": 100,
+				"likes":  50,
+			},
 		}
 
-		// Execute the template
 		if err := templ.Render(r.Context(), w, "greeter.html", data, "app_layout.html", "base_layout.html"); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}

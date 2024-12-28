@@ -1,0 +1,3 @@
+{{define "button"}}
+<button class="px-4 py-2 rounded-md {{.class}}" {{if .type}}type="{{.type}}" {{end}} {{if .disabled}}disabled{{end}} {{if .onClick}}onclick="{{.onClick}}" {{end}}>{{.text}}</button>
+{{end}}

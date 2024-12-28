@@ -1,0 +1,3 @@
+<div class="rounded-md p-4 mb-4 {{if eq .type "error"}}bg-red-50 text-red-700{{else if eq .type "success"}}bg-green-50 text-green-700{{else}}bg-blue-50 text-blue-700{{end}}">
+    <p class="text-sm">{{.message}}</p>
+</div>

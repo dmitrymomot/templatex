@@ -1,6 +1,5 @@
-<div class="prose">
-  <!-- Example localization content with parameters -->
-  <h1 class="text-lg font-semibold">{{T "greeting" "name" .Username }}</h1>
-  <!-- Example localization content without parameters -->
-  <p>{{T "welcome"}}</p>
+<div class="space-y-6">
+  {{component "components/alert.html" (props "type" "success" "message" (T "welcome") )}} {{component "card" (props "title" (T "greeting" "name" .Username) "content" "This is a demo of the component system." "class" "mb-6" )}}
+
+  <div class="flex space-x-4">{{component "button" (props "text" "Primary Button" "class" "bg-blue-500 text-white hover:bg-blue-600" "type" "button" )}} {{component "button" (props "text" "Secondary Button" "class" "bg-gray-200 text-gray-700 hover:bg-gray-300" "type" "button" )}}</div>
 </div>
