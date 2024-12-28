@@ -13,13 +13,13 @@ A flexible and powerful Go template engine with support for layouts, internation
 
 ## Features
 
--   Layout system with nested templates
--   Built-in i18n support using `ctxi18n`
--   Rich set of template functions
--   Thread-safe template rendering
--   Support for HTML, string, and writer output
--   Easy to use API
--   Clean error handling
+- Layout system with nested templates
+- Built-in i18n support using `ctxi18n`
+- Rich set of template functions
+- Thread-safe template rendering
+- Support for HTML, string, and writer output
+- Easy to use API
+- Clean error handling
 
 ## Installation
 
@@ -140,21 +140,21 @@ if err := ctxi18n.LoadWithDefault(translations, "en"); err != nil {
 
 The package includes several useful template functions:
 
--   `upper`: Convert string to uppercase
--   `lower`: Convert string to lowercase
--   `title`: Convert string to title case
--   `tern`: Ternary operator
--   `trim`: Trim whitespace
--   `replace`: Replace string
--   `split`: Split string
--   `join`: Join strings
--   `contains`: Check if string contains substring
--   `hasPrefix`: Check if string starts with prefix
--   `hasSuffix`: Check if string ends with suffix
--   `repeat`: Repeat string
--   `len`: Get length of string/slice/map
--   `htmlSafe`: Mark string as safe HTML
--   `safeField`: Safely access struct fields
+- `upper`: Convert string to uppercase
+- `lower`: Convert string to lowercase
+- `title`: Convert string to title case
+- `tern`: Ternary operator
+- `trim`: Trim whitespace
+- `replace`: Replace string
+- `split`: Split string
+- `join`: Join strings
+- `contains`: Check if string contains substring
+- `hasPrefix`: Check if string starts with prefix
+- `hasSuffix`: Check if string ends with suffix
+- `repeat`: Repeat string
+- `len`: Get length of string/slice/map
+- `htmlSafe`: Mark string as safe HTML
+- `safeField`: Safely access struct fields
 
 ### Custom Functions
 
