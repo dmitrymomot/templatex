@@ -4,10 +4,12 @@ import (
 	"bytes"
 	"context"
 	"embed"
+	"fmt"
 	"html/template"
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/dmitrymomot/templatex"
@@ -89,7 +91,6 @@ func TestRender(t *testing.T) {
 		template string
 		data     interface{}
 		layouts  []string
-		want     string
 		wantErr  bool
 	}{
 		{
@@ -132,7 +133,11 @@ func TestRender(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var buf bytes.Buffer
-			err := engine.Render(ctx, &buf, tt.template, tt.data, tt.layouts...)
+			// Create a new engine instance for each test case
+			testEngine, err := templatex.New("example/templates/", nil)
+			require.NoError(t, err)
+
+			err = testEngine.Render(ctx, &buf, tt.template, tt.data, tt.layouts...)
 			if tt.wantErr {
 				assert.Error(t, err)
 			} else {
@@ -243,6 +248,7 @@ func TestTemplateWithDifferentExtensions(t *testing.T) {
 }
 
 func TestConcurrentRendering(t *testing.T) {
+	// Create a new engine instance for concurrent testing
 	engine, err := templatex.New("example/templates/", nil)
 	require.NoError(t, err)
 
@@ -261,21 +267,33 @@ func TestConcurrentRendering(t *testing.T) {
 
 	// Run multiple goroutines to test concurrent rendering
 	concurrency := 10
-	done := make(chan bool)
+	errChan := make(chan error, concurrency)
+	var wg sync.WaitGroup
 
 	for i := 0; i < concurrency; i++ {
+		wg.Add(1)
 		go func() {
+			defer wg.Done()
 			var buf bytes.Buffer
-			err := engine.Render(ctx, &buf, "greeter.html", data, "base_layout.html")
-			assert.NoError(t, err)
-			assert.NotEmpty(t, buf.String())
-			done <- true
+			err := engine.Render(ctx, &buf, "greeter.html", data, "app_layout.html", "base_layout.html")
+			if err != nil {
+				errChan <- err
+				return
+			}
+			if buf.String() == "" {
+				errChan <- fmt.Errorf("empty render result")
+				return
+			}
 		}()
 	}
 
 	// Wait for all goroutines to complete
-	for i := 0; i < concurrency; i++ {
-		<-done
+	wg.Wait()
+	close(errChan)
+
+	// Check for any errors
+	for err := range errChan {
+		assert.NoError(t, err)
 	}
 }
 
