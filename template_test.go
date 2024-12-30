@@ -73,7 +73,7 @@ func TestNew(t *testing.T) {
 
 func TestRender(t *testing.T) {
 	// Setup test environment
-	engine, err := templatex.New("example/templates/", nil, ".html")
+	engine, err := templatex.New("example/templates/", nil, ".gohtml")
 	require.NoError(t, err)
 	require.NotNil(t, engine)
 
@@ -144,7 +144,7 @@ func TestRender(t *testing.T) {
 }
 
 func TestRenderString(t *testing.T) {
-	engine, err := templatex.New("example/templates/", nil, ".html")
+	engine, err := templatex.New("example/templates/", nil, ".gohtml")
 	require.NoError(t, err)
 
 	// Load translations
@@ -165,7 +165,7 @@ func TestRenderString(t *testing.T) {
 }
 
 func TestRenderHTML(t *testing.T) {
-	engine, err := templatex.New("example/templates/", nil, ".html")
+	engine, err := templatex.New("example/templates/", nil, ".gohtml")
 	require.NoError(t, err)
 
 	// Load translations
@@ -191,18 +191,18 @@ func TestTemplateWithCustomFunctions(t *testing.T) {
 		"lower": strings.ToLower,
 	}
 
-	_, err := templatex.New("example/templates/", customFuncs, ".html")
+	_, err := templatex.New("example/templates/", customFuncs, ".gohtml")
 	require.NoError(t, err)
 
 	// Create a test template file with custom functions
 	tempDir := t.TempDir()
-	tempFile := filepath.Join(tempDir, "test.html")
+	tempFile := filepath.Join(tempDir, "test.gohtml")
 	content := `{{.Text | upper}}`
 	err = os.WriteFile(tempFile, []byte(content), 0644)
 	require.NoError(t, err)
 
 	// Create a new engine with the temp directory
-	engine, err := templatex.New(tempDir, customFuncs, ".html")
+	engine, err := templatex.New(tempDir, customFuncs, ".gohtml")
 	require.NoError(t, err)
 
 	var buf bytes.Buffer
@@ -216,9 +216,9 @@ func TestTemplateWithDifferentExtensions(t *testing.T) {
 
 	// Create test files with different extensions
 	files := map[string]string{
-		"test1.html": "HTML template",
-		"test2.tpl":  "TPL template",
-		"test3.txt":  "TXT template",
+		"test1.gohtml": "HTML template",
+		"test2.tpl":    "TPL template",
+		"test3.txt":    "TXT template",
 	}
 
 	for name, content := range files {
@@ -227,7 +227,7 @@ func TestTemplateWithDifferentExtensions(t *testing.T) {
 	}
 
 	// Test with specific extensions
-	engine, err := templatex.New(tempDir, nil, ".html", ".tpl", ".txt")
+	engine, err := templatex.New(tempDir, nil, ".gohtml", ".tpl", ".txt")
 	require.NoError(t, err)
 
 	// Try rendering each template
@@ -244,7 +244,7 @@ func TestTemplateWithDifferentExtensions(t *testing.T) {
 }
 
 func TestConcurrentRendering(t *testing.T) {
-	engine, err := templatex.New("example/templates/", nil, ".html")
+	engine, err := templatex.New("example/templates/", nil, ".gohtml")
 	require.NoError(t, err)
 
 	// Load translations

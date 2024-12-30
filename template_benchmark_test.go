@@ -21,7 +21,7 @@ type pageData struct {
 
 func BenchmarkTemplateRender(b *testing.B) {
 	// Initialize template engine
-	templ, err := templatex.New("example/templates/", nil, ".html")
+	templ, err := templatex.New("example/templates/", nil)
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -65,7 +65,7 @@ func (w *mockWriter) Write(p []byte) (n int, err error) {
 
 func BenchmarkTemplateRenderParallel(b *testing.B) {
 	// Initialize template engine
-	templ, err := templatex.New("example/templates/", nil, ".html")
+	templ, err := templatex.New("example/templates/", nil)
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -107,13 +107,13 @@ func BenchmarkTemplateRenderComplexity(b *testing.B) {
 	}{
 		{"SingleLayout", []string{"base_layout"}},
 		{"TwoLayouts", []string{"app_layout", "base_layout"}},
-		{"ThreeLayouts", []string{"footer.html", "app_layout", "base_layout"}},
+		{"ThreeLayouts", []string{"footer", "app_layout", "base_layout"}},
 	}
 
 	for _, tc := range cases {
 		b.Run(tc.name, func(b *testing.B) {
 			// Initialize template engine
-			templ, err := templatex.New("example/templates/", nil, ".html")
+			templ, err := templatex.New("example/templates/", nil)
 			if err != nil {
 				b.Fatal(err)
 			}
