@@ -51,7 +51,7 @@ func TestNew(t *testing.T) {
 		{
 			name:    "Valid directory with custom extensions",
 			root:    "example/templates/",
-			exts:    []string{".html", ".tpl"},
+			exts:    []string{"", ".tpl"},
 			wantErr: false,
 		},
 	}
@@ -73,7 +73,7 @@ func TestNew(t *testing.T) {
 
 func TestRender(t *testing.T) {
 	// Setup test environment
-	engine, err := templatex.New("example/templates/", nil)
+	engine, err := templatex.New("example/templates/", nil, ".html")
 	require.NoError(t, err)
 	require.NotNil(t, engine)
 
@@ -94,37 +94,37 @@ func TestRender(t *testing.T) {
 	}{
 		{
 			name:     "Simple template",
-			template: "greeter.html",
+			template: "greeter",
 			data: pageData{
 				Title:    "Test",
 				Username: "John",
 				Test:     "Message",
 			},
-			layouts: []string{"base_layout.html"},
+			layouts: []string{"base_layout"},
 			wantErr: false,
 		},
 		{
 			name:     "Multiple layouts",
-			template: "greeter.html",
+			template: "greeter",
 			data: pageData{
 				Title:    "Test",
 				Username: "John",
 				Test:     "Message",
 			},
-			layouts: []string{"app_layout.html", "base_layout.html"},
+			layouts: []string{"app_layout", "base_layout"},
 			wantErr: false,
 		},
 		{
 			name:     "Non-existent template",
-			template: "nonexistent.html",
+			template: "nonexistent",
 			data:     nil,
 			wantErr:  true,
 		},
 		{
 			name:     "Non-existent layout",
-			template: "greeter.html",
+			template: "greeter",
 			data:     nil,
-			layouts:  []string{"nonexistent.html"},
+			layouts:  []string{"nonexistent"},
 			wantErr:  true,
 		},
 	}
@@ -144,7 +144,7 @@ func TestRender(t *testing.T) {
 }
 
 func TestRenderString(t *testing.T) {
-	engine, err := templatex.New("example/templates/", nil)
+	engine, err := templatex.New("example/templates/", nil, ".html")
 	require.NoError(t, err)
 
 	// Load translations
@@ -154,18 +154,18 @@ func TestRenderString(t *testing.T) {
 	ctx, err := ctxi18n.WithLocale(context.Background(), "en")
 	require.NoError(t, err)
 
-	result, err := engine.RenderString(ctx, "greeter.html", pageData{
+	result, err := engine.RenderString(ctx, "greeter", pageData{
 		Title:    "Test",
 		Username: "John",
 		Test:     "Message",
-	}, "base_layout.html")
+	}, "base_layout")
 
 	assert.NoError(t, err)
 	assert.NotEmpty(t, result)
 }
 
 func TestRenderHTML(t *testing.T) {
-	engine, err := templatex.New("example/templates/", nil)
+	engine, err := templatex.New("example/templates/", nil, ".html")
 	require.NoError(t, err)
 
 	// Load translations
@@ -175,11 +175,11 @@ func TestRenderHTML(t *testing.T) {
 	ctx, err := ctxi18n.WithLocale(context.Background(), "en")
 	require.NoError(t, err)
 
-	result, err := engine.RenderHTML(ctx, "greeter.html", pageData{
+	result, err := engine.RenderHTML(ctx, "greeter", pageData{
 		Title:    "Test",
 		Username: "John",
 		Test:     "Message",
-	}, "base_layout.html")
+	}, "base_layout")
 
 	assert.NoError(t, err)
 	assert.NotEmpty(t, result)
@@ -191,7 +191,7 @@ func TestTemplateWithCustomFunctions(t *testing.T) {
 		"lower": strings.ToLower,
 	}
 
-	_, err := templatex.New("example/templates/", customFuncs)
+	_, err := templatex.New("example/templates/", customFuncs, ".html")
 	require.NoError(t, err)
 
 	// Create a test template file with custom functions
@@ -202,11 +202,11 @@ func TestTemplateWithCustomFunctions(t *testing.T) {
 	require.NoError(t, err)
 
 	// Create a new engine with the temp directory
-	engine, err := templatex.New(tempDir, customFuncs)
+	engine, err := templatex.New(tempDir, customFuncs, ".html")
 	require.NoError(t, err)
 
 	var buf bytes.Buffer
-	err = engine.Render(context.Background(), &buf, "test.html", struct{ Text string }{"hello"})
+	err = engine.Render(context.Background(), &buf, "test", struct{ Text string }{"hello"})
 	assert.NoError(t, err)
 	assert.Equal(t, "HELLO", buf.String())
 }
@@ -227,14 +227,15 @@ func TestTemplateWithDifferentExtensions(t *testing.T) {
 	}
 
 	// Test with specific extensions
-	engine, err := templatex.New(tempDir, nil, ".html", ".tpl")
+	engine, err := templatex.New(tempDir, nil, ".html", ".tpl", ".txt")
 	require.NoError(t, err)
 
 	// Try rendering each template
 	for name, expectedContent := range files {
 		ext := filepath.Ext(name)
-		if ext == ".html" || ext == ".tpl" {
+		if ext == "" || ext == ".tpl" {
 			var buf bytes.Buffer
+			name = strings.TrimSuffix(name, ext)
 			err := engine.Render(context.Background(), &buf, name, nil)
 			assert.NoError(t, err)
 			assert.Equal(t, expectedContent, buf.String())
@@ -243,7 +244,7 @@ func TestTemplateWithDifferentExtensions(t *testing.T) {
 }
 
 func TestConcurrentRendering(t *testing.T) {
-	engine, err := templatex.New("example/templates/", nil)
+	engine, err := templatex.New("example/templates/", nil, ".html")
 	require.NoError(t, err)
 
 	// Load translations
@@ -266,7 +267,7 @@ func TestConcurrentRendering(t *testing.T) {
 	for i := 0; i < concurrency; i++ {
 		go func() {
 			var buf bytes.Buffer
-			err := engine.Render(ctx, &buf, "greeter.html", data, "base_layout.html")
+			err := engine.Render(ctx, &buf, "greeter", data, "base_layout")
 			assert.NoError(t, err)
 			assert.NotEmpty(t, buf.String())
 			done <- true
@@ -282,7 +283,7 @@ func TestConcurrentRendering(t *testing.T) {
 func TestNilEngine(t *testing.T) {
 	var engine *templatex.Engine
 	var buf bytes.Buffer
-	err := engine.Render(context.Background(), &buf, "test.html", nil)
+	err := engine.Render(context.Background(), &buf, "test", nil)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "template engine not initialized")
 }
