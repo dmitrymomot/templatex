@@ -165,6 +165,7 @@ func (e *Engine) getLayoutChain(layouts ...string) (*layoutChain, error) {
 }
 
 // Render implements optimized template rendering
+// Render implements optimized template rendering
 func (e *Engine) Render(ctx context.Context, out io.Writer, name string, binding interface{}, layouts ...string) error {
 	if e == nil || e.templates == nil {
 		return ErrTemplateEngineNotInitialized
@@ -173,8 +174,9 @@ func (e *Engine) Render(ctx context.Context, out io.Writer, name string, binding
 	// Try to get from cache first
 	cacheKey := fmt.Sprintf("%s-%v", name, layouts)
 	if cached, ok := e.cache.Load(cacheKey); ok {
-		if tmpl, ok := cached.(*template.Template); ok {
-			return tmpl.Execute(out, binding)
+		if cachedContent, ok := cached.(string); ok {
+			_, err := io.WriteString(out, cachedContent)
+			return err
 		}
 	}
 
@@ -183,22 +185,23 @@ func (e *Engine) Render(ctx context.Context, out io.Writer, name string, binding
 	buf.Reset()
 	defer bufferPool.Put(buf)
 
-	// Execute base template
+	// Get the base template
 	e.mu.RLock()
-	tmpl := e.templates.Lookup(name)
+	baseTmpl := e.templates.Lookup(name)
 	e.mu.RUnlock()
 
-	if tmpl == nil {
+	if baseTmpl == nil {
 		return errors.Join(ErrTemplateNotFound, fmt.Errorf("template: %s", name))
 	}
 
-	// Add context-specific functions
-	tmpl = tmpl.Funcs(template.FuncMap{
+	// Create a new template with context-specific functions
+	localFuncs := template.FuncMap{
 		"T":      getTranslator(ctx),
 		"ctxVal": ctxValue(ctx),
-	})
+	}
 
-	if err := tmpl.Execute(buf, binding); err != nil {
+	// Execute the base template
+	if err := executeTemplateWithFuncs(baseTmpl, buf, binding, localFuncs); err != nil {
 		return errors.Join(ErrTemplateExecutionFailed, err)
 	}
 
@@ -213,25 +216,40 @@ func (e *Engine) Render(ctx context.Context, out io.Writer, name string, binding
 	for _, layoutTmpl := range chain.templates {
 		buf.Reset()
 
-		layoutTmpl = layoutTmpl.Funcs(template.FuncMap{
+		embedFunc := template.FuncMap{
 			"embed": func() template.HTML {
 				return template.HTML(content)
 			},
-		})
+		}
 
-		if err := layoutTmpl.Execute(buf, binding); err != nil {
+		if err := executeTemplateWithFuncs(layoutTmpl, buf, binding, embedFunc); err != nil {
 			return errors.Join(ErrTemplateExecutionFailed, err)
 		}
 
 		content = buf.String()
 	}
 
-	// Store in cache
-	e.cache.Store(cacheKey, tmpl)
+	// Store the final rendered content in cache
+	e.cache.Store(cacheKey, content)
 
 	// Write final output
 	_, err = io.WriteString(out, content)
 	return err
+}
+
+// executeTemplateWithFuncs safely executes a template with additional functions
+func executeTemplateWithFuncs(tmpl *template.Template, buf *bytes.Buffer, data interface{}, fns template.FuncMap) error {
+	// Create a new template
+	newTmpl, err := tmpl.Clone()
+	if err != nil {
+		return err
+	}
+
+	// Add the functions
+	newTmpl = newTmpl.Funcs(fns)
+
+	// Execute the template
+	return newTmpl.Execute(buf, data)
 }
 
 // RenderString and RenderHTML implementations remain similar but use the optimized Render method

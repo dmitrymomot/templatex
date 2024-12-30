@@ -9,4 +9,5 @@ var (
 	ErrNoTemplateDirectory          = errors.New("no template directory provided")
 	ErrTemplateEngineNotInitialized = errors.New("template engine not initialized")
 	ErrNoTemplatesParsed            = errors.New("no templates parsed")
+	ErrTemplateCloneFailed          = errors.New("failed to clone template")
 )
