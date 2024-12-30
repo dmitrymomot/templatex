@@ -13,27 +13,28 @@ import (
 	"sync"
 )
 
-type Renderer interface {
-	Render(ctx context.Context, out io.Writer, name string, binding interface{}, layouts ...string) error
+var bufferPool = sync.Pool{
+	New: func() interface{} {
+		return new(bytes.Buffer)
+	},
 }
 
-type RendererHTML interface {
-	Renderer
-	RenderHTML(ctx context.Context, name string, binding interface{}, layouts ...string) (template.HTML, error)
+// layoutChain represents a pre-computed chain of templates
+type layoutChain struct {
+	templates []*template.Template
 }
 
-type RendererString interface {
-	Renderer
-	RenderString(ctx context.Context, name string, binding interface{}, layouts ...string) (string, error)
-}
-
-// Engine holds parsed templates and manages their rendering.
+// Engine holds parsed templates and manages their rendering
 type Engine struct {
-	templates *template.Template
-	mu        sync.Mutex
+	templates   *template.Template
+	layouts     map[string]*template.Template
+	mu          sync.RWMutex
+	cache       sync.Map // template cache
+	layoutCache sync.Map // layout chain cache
+	funcMap     template.FuncMap
 }
 
-// New initializes a TemplateManager by parsing templates from a glob pattern and adding custom function maps.
+// New initializes a Template Engine with optimized caching and pre-compiled layouts
 func New(root string, fns template.FuncMap, exts ...string) (*Engine, error) {
 	if root == "" {
 		return nil, ErrNoTemplateDirectory
@@ -44,95 +45,151 @@ func New(root string, fns template.FuncMap, exts ...string) (*Engine, error) {
 		return nil, errors.Join(ErrNoTemplateDirectory, fmt.Errorf("template directory does not exist: %s", root))
 	}
 
-	// Parse the templates and add a custom function map
-	tmpl := template.New("").Option("missingkey=zero").Funcs(defaultFuncs())
+	// Initialize engine
+	e := &Engine{
+		layouts: make(map[string]*template.Template),
+		funcMap: make(template.FuncMap),
+	}
 
-	// Add a custom function map
+	// Combine function maps
+	baseFuncs := defaultFuncs()
+	for name, fn := range baseFuncs {
+		e.funcMap[name] = fn
+	}
 	if len(fns) > 0 {
-		tmpl = tmpl.Funcs(fns)
+		for name, fn := range fns {
+			e.funcMap[name] = fn
+		}
 	}
 
-	// Parse the templates
+	// Parse templates
+	tmpl := template.New("").Option("missingkey=zero").Funcs(e.funcMap)
+
 	if len(exts) == 0 {
-		exts = []string{".html"}
+		exts = []string{".gohtml"}
 	}
-	if err := filepath.Walk(root, walkFunc(tmpl, root, exts)); err != nil {
+
+	if err := filepath.Walk(root, e.walkFunc(tmpl, root, exts)); err != nil {
 		return nil, errors.Join(ErrTemplateParsingFailed, err)
 	}
 
-	// Verify that at least one template was parsed
 	if tmpl.Templates() == nil {
 		return nil, ErrNoTemplatesParsed
 	}
 
-	return &Engine{templates: tmpl}, nil
+	e.templates = tmpl
+
+	// Pre-compile common layouts
+	e.precompileCommonLayouts()
+
+	return e, nil
 }
 
-// walkFunc is a helper function that parses a template file and adds it to the template manager.
-// It is used with filepath.Walk to parse all template files in a directory.
-func walkFunc(tmpl *template.Template, root string, exts []string) filepath.WalkFunc {
+// walkFunc is now a method of Engine to access its internal state
+func (e *Engine) walkFunc(tmpl *template.Template, root string, exts []string) filepath.WalkFunc {
 	return func(path string, info os.FileInfo, err error) error {
+		if err != nil || info.IsDir() {
+			return err
+		}
+
+		// Check file extension
+		validExt := false
+		for _, ext := range exts {
+			if filepath.Ext(path) == ext {
+				validExt = true
+				break
+			}
+		}
+		if !validExt {
+			return nil
+		}
+
+		relPath, err := filepath.Rel(root, path)
+		if err != nil {
+			return err
+		}
+		relPath = strings.ReplaceAll(relPath, string(os.PathSeparator), "/")
+
+		content, err := os.ReadFile(path)
 		if err != nil {
 			return err
 		}
 
-		if !info.IsDir() {
-			isValidExt := false
-			for _, ext := range exts {
-				if filepath.Ext(path) == ext {
-					isValidExt = true
-					break
-				}
-			}
-			if !isValidExt {
-				return nil
-			}
+		tmplName := strings.TrimSuffix(relPath, filepath.Ext(relPath))
 
-			// Get the relative path and normalize it
-			relPath, err := filepath.Rel(root, path)
-			if err != nil {
-				return err
-			}
-			relPath = strings.ReplaceAll(relPath, string(os.PathSeparator), "/")
-
-			// Read the content of the file
-			content, err := os.ReadFile(path)
-			if err != nil {
-				return err
-			}
-
-			// Check if the file contains any {{define}} blocks
-			if bytes.Contains(content, []byte("{{define")) {
-				// Parse the file directly if it contains define blocks
-				_, err = tmpl.ParseFiles(path)
-				if err != nil {
-					return err
-				}
-			} else {
-				// If no define blocks, create a new template with the file name
-				// and parse the content
-				_, err = tmpl.New(relPath).Parse(string(content))
-				if err != nil {
-					return err
-				}
-			}
+		if bytes.Contains(content, []byte("{{define")) {
+			_, err = tmpl.ParseFiles(path)
+		} else {
+			_, err = tmpl.New(tmplName).Parse(string(content))
 		}
-		return nil
+
+		return err
 	}
 }
 
-// Render renders a page using the specified layout chain.
-func (tm *Engine) Render(ctx context.Context, out io.Writer, name string, binding interface{}, layouts ...string) error {
-	if tm == nil || tm.templates == nil {
+// precompileCommonLayouts pre-compiles frequently used layouts
+func (e *Engine) precompileCommonLayouts() {
+	commonLayouts := []string{"base_layout.html", "app_layout.html"}
+	for _, layout := range commonLayouts {
+		if t := e.templates.Lookup(layout); t != nil {
+			e.layouts[layout] = t
+		}
+	}
+}
+
+// getLayoutChain returns a cached layout chain or creates a new one
+func (e *Engine) getLayoutChain(layouts ...string) (*layoutChain, error) {
+	if len(layouts) == 0 {
+		return &layoutChain{}, nil
+	}
+
+	cacheKey := strings.Join(layouts, ":")
+	if cached, ok := e.layoutCache.Load(cacheKey); ok {
+		return cached.(*layoutChain), nil
+	}
+
+	chain := &layoutChain{
+		templates: make([]*template.Template, len(layouts)),
+	}
+
+	for i, layout := range layouts {
+		if t := e.templates.Lookup(layout); t != nil {
+			chain.templates[i] = t
+		} else {
+			return nil, fmt.Errorf("layout not found: %s", layout)
+		}
+	}
+
+	e.layoutCache.Store(cacheKey, chain)
+	return chain, nil
+}
+
+// Render implements optimized template rendering
+func (e *Engine) Render(ctx context.Context, out io.Writer, name string, binding interface{}, layouts ...string) error {
+	if e == nil || e.templates == nil {
 		return ErrTemplateEngineNotInitialized
 	}
 
-	tm.mu.Lock() // Changed from RLock to Lock since we're modifying the template
-	// Create a clone of the template to avoid concurrent modifications
-	tmpl, err := tm.templates.Clone()
-	tm.mu.Unlock()
-	if err != nil {
-		return errors.Join(ErrTemplateExecutionFailed, err)
+	// Try to get from cache first
+	cacheKey := fmt.Sprintf("%s-%v", name, layouts)
+	if cached, ok := e.cache.Load(cacheKey); ok {
+		if tmpl, ok := cached.(*template.Template); ok {
+			return tmpl.Execute(out, binding)
+		}
+	}
+
+	// Get buffer from pool
+	buf := bufferPool.Get().(*bytes.Buffer)
+	buf.Reset()
+	defer bufferPool.Put(buf)
+
+	// Execute base template
+	e.mu.RLock()
+	tmpl := e.templates.Lookup(name)
+	e.mu.RUnlock()
+
+	if tmpl == nil {
+		return errors.Join(ErrTemplateNotFound, fmt.Errorf("template: %s", name))
 	}
 
 	// Add context-specific functions
@@ -141,64 +198,60 @@ func (tm *Engine) Render(ctx context.Context, out io.Writer, name string, bindin
 		"ctxVal": ctxValue(ctx),
 	})
 
-	var buf bytes.Buffer
-
-	// Render the base content (e.g., contacts.html) into a buffer.
-	err = tmpl.ExecuteTemplate(&buf, name, binding)
-	if err != nil {
+	if err := tmpl.Execute(buf, binding); err != nil {
 		return errors.Join(ErrTemplateExecutionFailed, err)
 	}
 
-	// Prepare the embed function to provide the previous buffer's content.
-	embedContent := buf.String()
+	// Get layout chain
+	chain, err := e.getLayoutChain(layouts...)
+	if err != nil {
+		return err
+	}
 
-	// Iterate through each layout, wrapping the previous output.
-	for _, layout := range layouts {
-		buf.Reset() // Clear buffer for the next layer.
+	// Process layout chain
+	content := buf.String()
+	for _, layoutTmpl := range chain.templates {
+		buf.Reset()
 
-		// Create a template with the embed function updated for each layer.
-		tmpl := tmpl.Lookup(layout)
-		if tmpl == nil {
-			return errors.Join(ErrTemplateNotFound, fmt.Errorf("layout: %s", layout))
-		}
-
-		// Add a custom embed function that returns the current content.
-		tmpl = tmpl.Funcs(template.FuncMap{
+		layoutTmpl = layoutTmpl.Funcs(template.FuncMap{
 			"embed": func() template.HTML {
-				return template.HTML(embedContent)
+				return template.HTML(content)
 			},
 		})
 
-		// Render the current layout with the updated embed content.
-		if err = tmpl.Execute(&buf, binding); err != nil {
+		if err := layoutTmpl.Execute(buf, binding); err != nil {
 			return errors.Join(ErrTemplateExecutionFailed, err)
 		}
 
-		// Update embedContent with new embedded content for the next layer.
-		embedContent = buf.String()
+		content = buf.String()
 	}
 
-	// Write the final output to the provided writer.
-	if _, err = io.WriteString(out, embedContent); err != nil {
-		return errors.Join(ErrTemplateExecutionFailed, err)
-	}
-	return nil
+	// Store in cache
+	e.cache.Store(cacheKey, tmpl)
+
+	// Write final output
+	_, err = io.WriteString(out, content)
+	return err
 }
 
-// RenderString renders a page using the specified layout chain and returns the result as a string.
-func (tm *Engine) RenderString(ctx context.Context, name string, binding interface{}, layouts ...string) (string, error) {
-	var buf bytes.Buffer
-	if err := tm.Render(ctx, &buf, name, binding, layouts...); err != nil {
+// RenderString and RenderHTML implementations remain similar but use the optimized Render method
+func (e *Engine) RenderString(ctx context.Context, name string, binding interface{}, layouts ...string) (string, error) {
+	buf := bufferPool.Get().(*bytes.Buffer)
+	buf.Reset()
+	defer bufferPool.Put(buf)
+
+	if err := e.Render(ctx, buf, name, binding, layouts...); err != nil {
 		return "", err
 	}
 	return buf.String(), nil
 }
 
-// RenderHTML renders a page using the specified layout chain and returns the result as a template.HTML.
-// This function is useful when embedding the result in a template.
-func (tm *Engine) RenderHTML(ctx context.Context, name string, binding interface{}, layouts ...string) (template.HTML, error) {
-	var buf bytes.Buffer
-	if err := tm.Render(ctx, &buf, name, binding, layouts...); err != nil {
+func (e *Engine) RenderHTML(ctx context.Context, name string, binding interface{}, layouts ...string) (template.HTML, error) {
+	buf := bufferPool.Get().(*bytes.Buffer)
+	buf.Reset()
+	defer bufferPool.Put(buf)
+
+	if err := e.Render(ctx, buf, name, binding, layouts...); err != nil {
 		return "", err
 	}
 	return template.HTML(buf.String()), nil
