@@ -7,10 +7,9 @@ import (
 	"log/slog"
 	"net/http"
 
+	"github.com/dmitrymomot/templatex"
 	"github.com/go-chi/chi/v5"
 	"github.com/invopop/ctxi18n"
-
-	"github.com/dmitrymomot/templatex"
 )
 
 //go:embed *.yml
@@ -38,7 +37,7 @@ func main() {
 		}
 
 		// Execute the template
-		if err := templ.Render(r.Context(), w, "greeter.html", data, "app_layout.html", "base_layout.html"); err != nil {
+		if err := templ.Render(r.Context(), w, "greeter", data, "app_layout", "base_layout"); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
 	})
