@@ -21,7 +21,7 @@ type pageData struct {
 
 func BenchmarkTemplateRender(b *testing.B) {
 	// Initialize template engine
-	templ, err := templatex.New("example/templates/", nil)
+	templ, err := templatex.New("example/templates/", nil, ".html")
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -49,7 +49,7 @@ func BenchmarkTemplateRender(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		err := templ.Render(ctx, w, "greeter.html", data, "app_layout.html", "base_layout.html")
+		err := templ.Render(ctx, w, "greeter", data, "app_layout", "base_layout")
 		if err != nil {
 			b.Fatal(err)
 		}
@@ -65,7 +65,7 @@ func (w *mockWriter) Write(p []byte) (n int, err error) {
 
 func BenchmarkTemplateRenderParallel(b *testing.B) {
 	// Initialize template engine
-	templ, err := templatex.New("example/templates/", nil)
+	templ, err := templatex.New("example/templates/", nil, ".html")
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -92,7 +92,7 @@ func BenchmarkTemplateRenderParallel(b *testing.B) {
 	b.RunParallel(func(pb *testing.PB) {
 		w := &mockWriter{}
 		for pb.Next() {
-			err := templ.Render(ctx, w, "greeter.html", data, "app_layout.html", "base_layout.html")
+			err := templ.Render(ctx, w, "greeter", data, "app_layout", "base_layout")
 			if err != nil {
 				b.Fatal(err)
 			}
@@ -105,15 +105,15 @@ func BenchmarkTemplateRenderComplexity(b *testing.B) {
 		name    string
 		layouts []string
 	}{
-		{"SingleLayout", []string{"base_layout.html"}},
-		{"TwoLayouts", []string{"app_layout.html", "base_layout.html"}},
-		{"ThreeLayouts", []string{"footer.html", "app_layout.html", "base_layout.html"}},
+		{"SingleLayout", []string{"base_layout"}},
+		{"TwoLayouts", []string{"app_layout", "base_layout"}},
+		{"ThreeLayouts", []string{"footer.html", "app_layout", "base_layout"}},
 	}
 
 	for _, tc := range cases {
 		b.Run(tc.name, func(b *testing.B) {
 			// Initialize template engine
-			templ, err := templatex.New("example/templates/", nil)
+			templ, err := templatex.New("example/templates/", nil, ".html")
 			if err != nil {
 				b.Fatal(err)
 			}
@@ -140,7 +140,7 @@ func BenchmarkTemplateRenderComplexity(b *testing.B) {
 
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
-				err := templ.Render(ctx, w, "greeter.html", data, tc.layouts...)
+				err := templ.Render(ctx, w, "greeter", data, tc.layouts...)
 				if err != nil {
 					b.Fatal(err)
 				}
