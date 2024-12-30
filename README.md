@@ -225,12 +225,11 @@ goos: darwin
 goarch: arm64
 pkg: github.com/dmitrymomot/templatex
 cpu: Apple M3 Max
-
-BenchmarkTemplateRender-14              	                   36338	     32432 ns/op       35159 B/op	     302 allocs/op
-BenchmarkTemplateRenderParallel-14      	                   55305	     22607 ns/op	   35221 B/op	     302 allocs/op
-BenchmarkTemplateRenderComplexity/SingleLayout-14         	   45424	     25724 ns/op	   31560 B/op	     268 allocs/op
-BenchmarkTemplateRenderComplexity/TwoLayouts-14           	   36391	     32812 ns/op	   35157 B/op	     302 allocs/op
-BenchmarkTemplateRenderComplexity/ThreeLayouts-14         	   30818	     39263 ns/op	   36247 B/op	     317 allocs/op
+BenchmarkTemplateRender-14              	 2819353	       424.2 ns/op	     888 B/op	       8 allocs/op
+BenchmarkTemplateRenderParallel-14      	 2994254	       402.9 ns/op	     890 B/op	       8 allocs/op
+BenchmarkTemplateRenderComplexity/SingleLayout-14         	 3310524	       364.5 ns/op	     704 B/op	       6 allocs/op
+BenchmarkTemplateRenderComplexity/TwoLayouts-14           	 2730922	       437.9 ns/op	     856 B/op	       7 allocs/op
+BenchmarkTemplateRenderComplexity/ThreeLayouts-14         	 2549355	       479.0 ns/op	     760 B/op	       8 allocs/op
 PASS
-ok  	github.com/dmitrymomot/templatex	7.757s
+ok  	github.com/dmitrymomot/templatex	8.432s
 ```
