@@ -227,7 +227,7 @@ The package includes several optimizations:
 Benchmark results:
 
 ```
-BenchmarkTemplateRender-14                               2827134    421.7 ns/op    888 B/op    8 allocs/op
+BenchmarkTemplateRender-14                              2827134    421.7 ns/op    888 B/op    8 allocs/op
 BenchmarkTemplateRenderParallel-14                      2979015    399.2 ns/op    890 B/op    8 allocs/op
 BenchmarkTemplateRenderComplexity/SingleLayout-14       3339643    351.7 ns/op    704 B/op    6 allocs/op
 BenchmarkTemplateRenderComplexity/TwoLayouts-14         2798064    429.5 ns/op    856 B/op    7 allocs/op
