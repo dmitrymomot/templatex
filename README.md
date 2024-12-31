@@ -221,15 +221,17 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 ```shell
 go test -bench=. -benchmem .
+
 goos: darwin
 goarch: arm64
 pkg: github.com/dmitrymomot/templatex
 cpu: Apple M3 Max
-BenchmarkTemplateRender-14              	 2819353	       424.2 ns/op	     888 B/op	       8 allocs/op
-BenchmarkTemplateRenderParallel-14      	 2994254	       402.9 ns/op	     890 B/op	       8 allocs/op
-BenchmarkTemplateRenderComplexity/SingleLayout-14         	 3310524	       364.5 ns/op	     704 B/op	       6 allocs/op
-BenchmarkTemplateRenderComplexity/TwoLayouts-14           	 2730922	       437.9 ns/op	     856 B/op	       7 allocs/op
-BenchmarkTemplateRenderComplexity/ThreeLayouts-14         	 2549355	       479.0 ns/op	     760 B/op	       8 allocs/op
+
+BenchmarkTemplateRender-14              	                   2827134	       421.7 ns/op	     888 B/op	       8 allocs/op
+BenchmarkTemplateRenderParallel-14      	                   2979015	       399.2 ns/op	     890 B/op	       8 allocs/op
+BenchmarkTemplateRenderComplexity/SingleLayout-14         	   3339643	       351.7 ns/op	     704 B/op	       6 allocs/op
+BenchmarkTemplateRenderComplexity/TwoLayouts-14           	   2798064	       429.5 ns/op	     856 B/op	       7 allocs/op
+BenchmarkTemplateRenderComplexity/ThreeLayouts-14         	   2453024	       487.0 ns/op	     888 B/op	       8 allocs/op
 PASS
-ok  	github.com/dmitrymomot/templatex	8.432s
+ok  	github.com/dmitrymomot/templatex	8.373s
 ```
