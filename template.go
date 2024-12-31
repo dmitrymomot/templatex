@@ -24,7 +24,16 @@ type layoutChain struct {
 	templates []*template.Template
 }
 
-// Engine holds parsed templates and manages their rendering
+// Engine is a template engine that manages the parsing, caching, and rendering of templates.
+// It provides thread-safe access to templates and layouts through synchronized maps and mutexes.
+//
+// The Engine type implements the following features:
+//   - Template parsing and compilation
+//   - Layout template management
+//   - Thread-safe template caching
+//   - Custom template function mapping
+//   - Support for multiple file extensions
+//   - Common layout precompilation
 type Engine struct {
 	templates     *template.Template
 	layouts       map[string]*template.Template
@@ -36,7 +45,27 @@ type Engine struct {
 	commonLayouts []string
 }
 
-// New initializes a Template Engine with optimized caching and pre-compiled layouts
+// New creates a new template engine instance with optimized caching and pre-compiled layouts.
+//
+// Parameters:
+//   - root: The root directory path containing template files
+//   - opts: Optional variadic list of Option functions to configure the engine
+//
+// The function performs the following steps:
+//  1. Validates the template directory exists
+//  2. Initializes a new Engine with default settings
+//  3. Applies any provided options
+//  4. Parses all template files in the root directory
+//  5. Pre-compiles common layout templates
+//
+// Returns:
+//   - *Engine: The initialized template engine
+//   - error: Any error that occurred during initialization
+//
+// Possible errors:
+//   - ErrNoTemplateDirectory if root is empty or directory doesn't exist
+//   - ErrTemplateParsingFailed if template parsing fails
+//   - ErrNoTemplatesParsed if no templates were found
 func New(root string, opts ...Option) (*Engine, error) {
 	if root == "" {
 		return nil, ErrNoTemplateDirectory
@@ -157,8 +186,23 @@ func (e *Engine) getLayoutChain(layouts ...string) (*layoutChain, error) {
 	return chain, nil
 }
 
-// Render implements optimized template rendering
-// Render implements optimized template rendering
+// Render executes a template with the given name and binding data, applying optional layouts.
+// It supports caching of rendered content for improved performance.
+//
+// Parameters:
+//   - ctx: Context for the request, used for template functions like translation
+//   - out: Writer where the rendered template will be written
+//   - name: Name of the template to render
+//   - binding: Data to be passed to the template
+//   - layouts: Optional list of layout templates to wrap the content
+//
+// The function performs the following steps:
+//  1. Checks cache for previously rendered content
+//  2. Executes the base template with context-specific functions
+//  3. Applies any layout templates in sequence
+//  4. Caches the final result for future use
+//
+// Returns an error if template execution fails or templates are not found.
 func (e *Engine) Render(ctx context.Context, out io.Writer, name string, binding interface{}, layouts ...string) error {
 	if e == nil || e.templates == nil {
 		return ErrTemplateEngineNotInitialized
@@ -245,7 +289,21 @@ func executeTemplateWithFuncs(tmpl *template.Template, buf *bytes.Buffer, data i
 	return newTmpl.Execute(buf, data)
 }
 
-// RenderString and RenderHTML implementations remain similar but use the optimized Render method
+// RenderString renders a template to a string with optional layouts.
+//
+// Parameters:
+//   - ctx: Context for the request, used for template functions
+//   - name: Name of the template to render
+//   - binding: Data to be passed to the template
+//   - layouts: Optional list of layout templates to wrap the content
+//
+// Returns:
+//   - string: The rendered template as a string
+//   - error: Any error that occurred during rendering
+//
+// RenderString uses the underlying Render method but returns the result as a string
+// instead of writing to an io.Writer. It efficiently manages buffer allocation using
+// a sync.Pool to minimize memory allocations.
 func (e *Engine) RenderString(ctx context.Context, name string, binding interface{}, layouts ...string) (string, error) {
 	buf := bufferPool.Get().(*bytes.Buffer)
 	buf.Reset()
@@ -257,6 +315,19 @@ func (e *Engine) RenderString(ctx context.Context, name string, binding interfac
 	return buf.String(), nil
 }
 
+// RenderHTML renders a template to template.HTML with optional layouts.
+// This function behaves similarly to RenderString but returns template.HTML
+// instead of a string, which marks the content as safe HTML that doesn't need escaping.
+//
+// Parameters:
+//   - ctx: Context for the request, used for template functions
+//   - name: Name of the template to render
+//   - binding: Data to be passed to the template
+//   - layouts: Optional list of layout templates to wrap the content
+//
+// Returns:
+//   - template.HTML: The rendered template as a template.HTML type
+//   - error: Any error that occurred during rendering
 func (e *Engine) RenderHTML(ctx context.Context, name string, binding interface{}, layouts ...string) (template.HTML, error) {
 	buf := bufferPool.Get().(*bytes.Buffer)
 	buf.Reset()
