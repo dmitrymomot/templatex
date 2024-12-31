@@ -19,7 +19,7 @@ func main() {
 	r := chi.NewRouter()
 	r.Use(Localization("en"))
 
-	templ, _ := templatex.New("templates/", nil)
+	templ, _ := templatex.New("templates/", templatex.WithLayouts("app_layout", "base_layout"))
 
 	// Load translations
 	if err := ctxi18n.LoadWithDefault(translations, "en"); err != nil {
