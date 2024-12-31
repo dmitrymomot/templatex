@@ -72,6 +72,7 @@ func defaultFuncs() template.FuncMap {
 		},
 		"default":   defaultValue,
 		"safeField": safeField,
+		"isset":     func(v interface{}) bool { return v != nil },
 
 		// Placeholders for context-related functions.
 		// These should be replaced with actual functions in your application
