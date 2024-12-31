@@ -5,6 +5,7 @@
 [![License](https://img.shields.io/github/license/dmitrymomot/templatex)](https://github.com/dmitrymomot/templatex/blob/main/LICENSE)
 
 [![Tests](https://github.com/dmitrymomot/templatex/actions/workflows/tests.yml/badge.svg)](https://github.com/dmitrymomot/templatex/actions/workflows/tests.yml)
+[![codecov](https://codecov.io/github/dmitrymomot/templatex/graph/badge.svg?token=V5XK8QQYIQ)](https://codecov.io/github/dmitrymomot/templatex)
 [![CodeQL Analysis](https://github.com/dmitrymomot/templatex/actions/workflows/codeql-analysis.yml/badge.svg)](https://github.com/dmitrymomot/templatex/actions/workflows/codeql-analysis.yml)
 [![GolangCI Lint](https://github.com/dmitrymomot/templatex/actions/workflows/golangci-lint.yml/badge.svg)](https://github.com/dmitrymomot/templatex/actions/workflows/golangci-lint.yml)
 [![Go Report Card](https://goreportcard.com/badge/github.com/dmitrymomot/templatex)](https://goreportcard.com/report/github.com/dmitrymomot/templatex)
