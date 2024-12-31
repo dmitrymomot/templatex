@@ -703,3 +703,38 @@ func TestPrintIfFunctions(t *testing.T) {
 		})
 	}
 }
+
+func TestTemplateCache(t *testing.T) {
+	engine, err := templatex.New("example/templates/", templatex.WithExtensions(".gohtml"))
+	require.NoError(t, err)
+	require.NotNil(t, engine)
+
+	// Test data
+	data := pageData{
+		Title:    "Test",
+		Username: "John",
+		Test:     "Message",
+	}
+
+	// First render - should cache the result
+	var buf1 bytes.Buffer
+	err = engine.Render(context.Background(), &buf1, "greeter", data, "base_layout")
+	require.NoError(t, err)
+	firstResult := buf1.String()
+	require.NotEmpty(t, firstResult)
+
+	// Modify the data
+	data.Username = "Jane"
+
+	// Second render - should use cached result
+	var buf2 bytes.Buffer
+	err = engine.Render(context.Background(), &buf2, "greeter", data, "base_layout")
+	require.NoError(t, err)
+	secondResult := buf2.String()
+	require.NotEmpty(t, secondResult)
+
+	// Results should be identical due to caching
+	assert.Equal(t, firstResult, secondResult)
+	assert.Contains(t, secondResult, "John")    // Should contain original name
+	assert.NotContains(t, secondResult, "Jane") // Should not contain modified name
+}
