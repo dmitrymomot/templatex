@@ -287,3 +287,343 @@ func TestNilEngine(t *testing.T) {
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "template engine not initialized")
 }
+
+func TestDefaultFunctions(t *testing.T) {
+	engine, err := templatex.New("example/templates/")
+	require.NoError(t, err)
+
+	tests := []struct {
+		name     string
+		template string
+		data     interface{}
+		expected string
+	}{
+		{
+			name:     "upper function",
+			template: `{{ "hello" | upper }}`,
+			expected: "HELLO",
+		},
+		{
+			name:     "lower function",
+			template: `{{ "HELLO" | lower }}`,
+			expected: "hello",
+		},
+		{
+			name:     "title function",
+			template: `{{ "hello world" | title }}`,
+			expected: "Hello World",
+		},
+		{
+			name:     "tern function",
+			template: `{{ tern true "yes" "no" }}`,
+			expected: "yes",
+		},
+		{
+			name:     "trim function",
+			template: `{{ " hello " | trim }}`,
+			expected: "hello",
+		},
+		{
+			name:     "replace function",
+			template: `{{ replace "hello" "l" "w" }}`,
+			expected: "hewwo",
+		},
+		{
+			name:     "split and join function",
+			template: `{{ split "a,b,c" "," | join "-" }}`,
+			expected: "a-b-c",
+		},
+		{
+			name:     "contains function",
+			template: `{{ contains "hello" "ll" }}`,
+			expected: "true",
+		},
+		{
+			name:     "len function",
+			template: `{{ len "hello" }}`,
+			expected: "5",
+		},
+		{
+			name:     "default function",
+			template: `{{ "" | default "empty" }}`,
+			expected: "empty",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tmpl := template.New("test").Funcs(engine.GetFuncMap())
+			tmpl, err := tmpl.Parse(tt.template)
+			require.NoError(t, err)
+
+			var buf bytes.Buffer
+			err = tmpl.Execute(&buf, tt.data)
+			require.NoError(t, err)
+			assert.Equal(t, tt.expected, buf.String())
+		})
+	}
+}
+
+func TestTemplateFunctions(t *testing.T) {
+	tests := []struct {
+		name     string
+		template string
+		data     interface{}
+		expected string
+	}{
+		{
+			name:     "hasPrefix function",
+			template: `{{ hasPrefix "hello world" "hello" }}`,
+			expected: "true",
+		},
+		{
+			name:     "hasSuffix function",
+			template: `{{ hasSuffix "hello world" "world" }}`,
+			expected: "true",
+		},
+		{
+			name:     "repeat function",
+			template: `{{ repeat "a" 3 }}`,
+			expected: "aaa",
+		},
+		{
+			name:     "len function with map",
+			template: `{{ len . }}`,
+			data:     map[string]interface{}{"a": 1, "b": 2},
+			expected: "2",
+		},
+		{
+			name:     "len function with slice",
+			template: `{{ len . }}`,
+			data:     []interface{}{1, 2, 3},
+			expected: "3",
+		},
+		{
+			name:     "htmlSafe function",
+			template: `{{ "<p>hello</p>" | htmlSafe }}`,
+			expected: "<p>hello</p>",
+		},
+		{
+			name:     "isset function with nil",
+			template: `{{ isset . }}`,
+			data:     nil,
+			expected: "false",
+		},
+		{
+			name:     "isset function with value",
+			template: `{{ isset . }}`,
+			data:     "value",
+			expected: "true",
+		},
+		{
+			name:     "boolToString function",
+			template: `{{ boolToString true }}`,
+			expected: "true",
+		},
+	}
+
+	engine, err := templatex.New("example/templates/")
+	require.NoError(t, err)
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tmpl := template.New("test").Funcs(engine.GetFuncMap())
+			tmpl, err := tmpl.Parse(tt.template)
+			require.NoError(t, err)
+
+			var buf bytes.Buffer
+			err = tmpl.Execute(&buf, tt.data)
+			require.NoError(t, err)
+			assert.Equal(t, tt.expected, buf.String())
+		})
+	}
+}
+
+func TestDefaultValue(t *testing.T) {
+	tests := []struct {
+		name         string
+		template     string
+		data         interface{}
+		defaultValue interface{}
+		expected     string
+	}{
+		{
+			name:     "default with nil pointer",
+			template: `{{ . | default "default" }}`,
+			data:     (*string)(nil),
+			expected: "default",
+		},
+		{
+			name:     "default with empty interface",
+			template: `{{ . | default "default" }}`,
+			data:     interface{}(nil),
+			expected: "default",
+		},
+		{
+			name:     "default with zero int",
+			template: `{{ . | default "default" }}`,
+			data:     0,
+			expected: "default",
+		},
+		{
+			name:     "default with zero uint",
+			template: `{{ . | default "default" }}`,
+			data:     uint(0),
+			expected: "default",
+		},
+		{
+			name:     "default with zero float",
+			template: `{{ . | default "default" }}`,
+			data:     0.0,
+			expected: "default",
+		},
+		{
+			name:     "default with empty slice",
+			template: `{{ . | default "default" }}`,
+			data:     []string{},
+			expected: "default",
+		},
+		{
+			name:     "default with false bool",
+			template: `{{ . | default "default" }}`,
+			data:     false,
+			expected: "default",
+		},
+	}
+
+	engine, err := templatex.New("example/templates/")
+	require.NoError(t, err)
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tmpl := template.New("test").Funcs(engine.GetFuncMap())
+			tmpl, err := tmpl.Parse(tt.template)
+			require.NoError(t, err)
+
+			var buf bytes.Buffer
+			err = tmpl.Execute(&buf, tt.data)
+			require.NoError(t, err)
+			assert.Equal(t, tt.expected, buf.String())
+		})
+	}
+}
+
+func TestCustomFunctions(t *testing.T) {
+	engine, err := templatex.New(
+		"example/templates/",
+		templatex.WithFunc("customFunc", func() string { return "custom" }),
+	)
+	require.NoError(t, err)
+
+	tmpl := template.New("test").Funcs(engine.GetFuncMap())
+	tmpl, err = tmpl.Parse(`{{ customFunc }}`)
+	require.NoError(t, err)
+
+	var buf bytes.Buffer
+	err = tmpl.Execute(&buf, nil)
+	require.NoError(t, err)
+	assert.Equal(t, "custom", buf.String())
+}
+
+func TestTemplateWithLayouts(t *testing.T) {
+	engine, err := templatex.New(
+		"example/templates/",
+		templatex.WithLayouts("base_layout", "app_layout"),
+	)
+	require.NoError(t, err)
+	require.NotNil(t, engine)
+}
+
+func TestSafeFieldFunction(t *testing.T) {
+	type TestStruct struct {
+		Name string
+		Age  int
+	}
+
+	tests := []struct {
+		name     string
+		template string
+		data     interface{}
+		expected string
+	}{
+		{
+			name:     "valid field",
+			template: `{{ safeField . "Name" }}`,
+			data:     TestStruct{Name: "John"},
+			expected: "John",
+		},
+		{
+			name:     "invalid field",
+			template: `{{ safeField . "Invalid" }}`,
+			data:     TestStruct{Name: "John"},
+			expected: "",
+		},
+		{
+			name:     "field with fallback",
+			template: `{{ safeField . "Invalid" "fallback" }}`,
+			data:     TestStruct{Name: "John"},
+			expected: "fallback",
+		},
+	}
+
+	engine, err := templatex.New("example/templates/")
+	require.NoError(t, err)
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tmpl := template.New("test").Funcs(engine.GetFuncMap())
+			tmpl, err := tmpl.Parse(tt.template)
+			require.NoError(t, err)
+
+			var buf bytes.Buffer
+			err = tmpl.Execute(&buf, tt.data)
+			require.NoError(t, err)
+			assert.Equal(t, tt.expected, buf.String())
+		})
+	}
+}
+
+func TestPrintIfFunctions(t *testing.T) {
+	tests := []struct {
+		name     string
+		template string
+		expected string
+	}{
+		{
+			name:     "printIf true",
+			template: `{{ printIf true "show" }}`,
+			expected: "show",
+		},
+		{
+			name:     "printIf false",
+			template: `{{ printIf false "show" }}`,
+			expected: "",
+		},
+		{
+			name:     "printIfElse true",
+			template: `{{ printIfElse true "yes" "no" }}`,
+			expected: "yes",
+		},
+		{
+			name:     "printIfElse false",
+			template: `{{ printIfElse false "yes" "no" }}`,
+			expected: "no",
+		},
+	}
+
+	engine, err := templatex.New("example/templates/")
+	require.NoError(t, err)
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tmpl := template.New("test").Funcs(engine.GetFuncMap())
+			tmpl, err := tmpl.Parse(tt.template)
+			require.NoError(t, err)
+
+			var buf bytes.Buffer
+			err = tmpl.Execute(&buf, nil)
+			require.NoError(t, err)
+			assert.Equal(t, tt.expected, buf.String())
+		})
+	}
+}

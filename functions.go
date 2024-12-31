@@ -41,9 +41,7 @@ func defaultFuncs() template.FuncMap {
 		"split": func(s, sep string) []string {
 			return strings.Split(s, sep)
 		},
-		"join": func(elems []string, sep string) string {
-			return strings.Join(elems, sep)
-		},
+		"join": join,
 		"contains": func(s, substr string) bool {
 			return strings.Contains(s, substr)
 		},
@@ -218,4 +216,27 @@ func printIfElse(cond bool, data, elseData any) string {
 		return fmt.Sprintf("%v", data)
 	}
 	return fmt.Sprintf("%v", elseData)
+}
+
+// reversed parameters is required to support variadic functions
+func join(sep string, v interface{}) string {
+	var strs []string
+	switch slice := v.(type) {
+	case []string:
+		strs = slice
+	case []interface{}:
+		strs = make([]string, len(slice))
+		for i, v := range slice {
+			strs[i] = fmt.Sprint(v)
+		}
+	case string:
+		strs = []string{slice}
+	default:
+		if v == nil {
+			return ""
+		}
+		// Handle any other type by converting to string
+		strs = []string{fmt.Sprint(v)}
+	}
+	return strings.Join(strs, sep)
 }

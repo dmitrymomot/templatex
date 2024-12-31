@@ -338,3 +338,24 @@ func (e *Engine) RenderHTML(ctx context.Context, name string, binding interface{
 	}
 	return template.HTML(buf.String()), nil
 }
+
+// GetFuncMap returns the function map used by the template engine.
+//
+// The function performs the following:
+//  1. Acquires a read lock to ensure thread-safe access to the function map
+//  2. Returns a copy of the engine's function map
+//  3. Automatically releases the read lock when returning
+//
+// Returns:
+//   - template.FuncMap: A map of function names to their implementations
+//
+// This function is useful for:
+//   - Testing template function availability
+//   - Debugging template function issues
+//   - Inspecting custom function additions
+//   - Verifying function map modifications
+func (e *Engine) GetFuncMap() template.FuncMap {
+	e.mu.RLock()
+	defer e.mu.RUnlock()
+	return e.funcMap
+}
