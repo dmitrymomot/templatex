@@ -58,7 +58,7 @@ func TestNew(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			engine, err := templatex.New(tt.root, tt.fns, tt.exts...)
+			engine, err := templatex.New(tt.root, templatex.WithFuncs(tt.fns), templatex.WithExtensions(tt.exts...))
 			if tt.wantErr {
 				assert.Error(t, err)
 				assert.Contains(t, err.Error(), tt.errorMsg)
@@ -73,7 +73,7 @@ func TestNew(t *testing.T) {
 
 func TestRender(t *testing.T) {
 	// Setup test environment
-	engine, err := templatex.New("example/templates/", nil, ".gohtml")
+	engine, err := templatex.New("example/templates/", templatex.WithExtensions(".gohtml"))
 	require.NoError(t, err)
 	require.NotNil(t, engine)
 
@@ -144,7 +144,7 @@ func TestRender(t *testing.T) {
 }
 
 func TestRenderString(t *testing.T) {
-	engine, err := templatex.New("example/templates/", nil, ".gohtml")
+	engine, err := templatex.New("example/templates/", templatex.WithExtensions(".gohtml"))
 	require.NoError(t, err)
 
 	// Load translations
@@ -165,7 +165,7 @@ func TestRenderString(t *testing.T) {
 }
 
 func TestRenderHTML(t *testing.T) {
-	engine, err := templatex.New("example/templates/", nil, ".gohtml")
+	engine, err := templatex.New("example/templates/", templatex.WithExtensions(".gohtml"))
 	require.NoError(t, err)
 
 	// Load translations
@@ -191,7 +191,7 @@ func TestTemplateWithCustomFunctions(t *testing.T) {
 		"lower": strings.ToLower,
 	}
 
-	_, err := templatex.New("example/templates/", customFuncs, ".gohtml")
+	_, err := templatex.New("example/templates/", templatex.WithExtensions(".gohtml"), templatex.WithFuncs(customFuncs))
 	require.NoError(t, err)
 
 	// Create a test template file with custom functions
@@ -202,7 +202,7 @@ func TestTemplateWithCustomFunctions(t *testing.T) {
 	require.NoError(t, err)
 
 	// Create a new engine with the temp directory
-	engine, err := templatex.New(tempDir, customFuncs, ".gohtml")
+	engine, err := templatex.New(tempDir, templatex.WithExtensions(".gohtml"), templatex.WithFuncs(customFuncs))
 	require.NoError(t, err)
 
 	var buf bytes.Buffer
@@ -227,7 +227,7 @@ func TestTemplateWithDifferentExtensions(t *testing.T) {
 	}
 
 	// Test with specific extensions
-	engine, err := templatex.New(tempDir, nil, ".gohtml", ".tpl", ".txt")
+	engine, err := templatex.New(tempDir, templatex.WithExtensions(".gohtml", ".tpl", ".txt"))
 	require.NoError(t, err)
 
 	// Try rendering each template
@@ -244,7 +244,7 @@ func TestTemplateWithDifferentExtensions(t *testing.T) {
 }
 
 func TestConcurrentRendering(t *testing.T) {
-	engine, err := templatex.New("example/templates/", nil, ".gohtml")
+	engine, err := templatex.New("example/templates/", templatex.WithExtensions(".gohtml"))
 	require.NoError(t, err)
 
 	// Load translations
