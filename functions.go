@@ -2,6 +2,7 @@ package templatex
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"html/template"
 	"reflect"
@@ -70,9 +71,13 @@ func defaultFuncs() template.FuncMap {
 		"htmlSafe": func(html string) template.HTML {
 			return template.HTML(html)
 		},
-		"default":   defaultValue,
-		"safeField": safeField,
-		"isset":     func(v interface{}) bool { return v != nil },
+		"default":      defaultValue,
+		"safeField":    safeField,
+		"debug":        prettyPrint,
+		"isset":        func(v interface{}) bool { return v != nil },
+		"boolToString": func(b bool) string { return fmt.Sprintf("%t", b) },
+		"printIf":      printIf,
+		"printIfElse":  printIfElse,
 
 		// Placeholders for context-related functions.
 		// These should be replaced with actual functions in your application
@@ -183,4 +188,34 @@ func defaultValue(defaultValue, value interface{}) interface{} {
 		}
 	}
 	return value
+}
+
+// prettyPrint returns a pretty-printed JSON string of the given value.
+// If the value cannot be marshaled to JSON, it returns the value as a string.
+// This function is useful for debugging purposes.
+func prettyPrint(v interface{}) string {
+	b, err := json.MarshalIndent(v, "", "  ")
+	if err != nil {
+		return fmt.Sprintf("%+v", v)
+	}
+	return string(b)
+}
+
+// printIf returns the data if the condition is true, otherwise it returns an empty string
+// Usage: {{ printIf .Condition .Data }}
+func printIf(cond bool, data any) string {
+	if cond {
+		return fmt.Sprintf("%v", data)
+	}
+	return ""
+}
+
+// printIfElse returns the data if the condition is true, otherwise it returns the elseData
+// Usage: {{ printIfElse .Condition .Data .ElseData }}
+// Example: {{ printIfElse .IsAdmin "Admin" "User" }}
+func printIfElse(cond bool, data, elseData any) string {
+	if cond {
+		return fmt.Sprintf("%v", data)
+	}
+	return fmt.Sprintf("%v", elseData)
 }
