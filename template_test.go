@@ -314,9 +314,14 @@ func TestDefaultFunctions(t *testing.T) {
 			expected: "Hello World",
 		},
 		{
-			name:     "tern function",
+			name:     "tern function / true",
 			template: `{{ tern true "yes" "no" }}`,
 			expected: "yes",
+		},
+		{
+			name:     "tern function / false",
+			template: `{{ tern false "yes" "no" }}`,
+			expected: "no",
 		},
 		{
 			name:     "trim function",
@@ -334,6 +339,30 @@ func TestDefaultFunctions(t *testing.T) {
 			expected: "a-b-c",
 		},
 		{
+			name:     "join function / string slice",
+			template: `{{ join "-" . }}`,
+			data:     []string{"a", "b", "c"},
+			expected: "a-b-c",
+		},
+		{
+			name:     "join function / string",
+			template: `{{ join "-" . }}`,
+			data:     "abc",
+			expected: "abc",
+		},
+		{
+			name:     "join function / interface slice",
+			template: `{{ join "-" . }}`,
+			data:     []interface{}{"a", "b", "c"},
+			expected: "a-b-c",
+		},
+		{
+			name:     "join function / nil",
+			template: `{{ join "-" . }}`,
+			data:     nil,
+			expected: "",
+		},
+		{
 			name:     "contains function",
 			template: `{{ contains "hello" "ll" }}`,
 			expected: "true",
@@ -344,9 +373,56 @@ func TestDefaultFunctions(t *testing.T) {
 			expected: "5",
 		},
 		{
+			name:     "len function / default value",
+			template: `{{ len 1 }}`,
+			expected: "0",
+		},
+		{
 			name:     "default function",
 			template: `{{ "" | default "empty" }}`,
 			expected: "empty",
+		},
+		{
+			name:     "default function / nil",
+			template: `{{ . | default "empty" }}`,
+			data:     nil,
+			expected: "empty",
+		},
+		{
+			name:     "default function / pointer",
+			template: `{{ . | default "empty" }}`,
+			data: func() *string {
+				s := "hello"
+				return &s
+			}(),
+			expected: "hello",
+		},
+		{
+			name:     "embed placeholder",
+			template: `{{ embed }}`,
+			expected: "",
+		},
+		{
+			name:     "T placeholder",
+			template: `{{ T "test.key" }}`,
+			expected: "test.key",
+		},
+		{
+			name:     "ctxVal placeholder",
+			template: `{{ ctxVal "test" }}`,
+			expected: "",
+		},
+		{
+			name:     "debug",
+			template: `{{ debug . }}`,
+			data:     "hello",
+			expected: "&#34;hello&#34;",
+		},
+		{
+			name:     "debug / nil",
+			template: `{{ debug . }}`,
+			data:     nil,
+			expected: "null",
 		},
 	}
 
