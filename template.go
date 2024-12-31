@@ -140,7 +140,7 @@ func (e *Engine) walkFunc(tmpl *template.Template, root string, exts []string) f
 
 		tmplName := strings.TrimSuffix(relPath, filepath.Ext(relPath))
 
-		if bytes.Contains(content, []byte("{{define")) {
+		if bytes.Contains(content, []byte("{{define")) || bytes.Contains(content, []byte("{{ define")) {
 			_, err = tmpl.ParseFiles(path)
 		} else {
 			_, err = tmpl.New(tmplName).Parse(string(content))
