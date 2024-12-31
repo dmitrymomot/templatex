@@ -26,16 +26,18 @@ type layoutChain struct {
 
 // Engine holds parsed templates and manages their rendering
 type Engine struct {
-	templates   *template.Template
-	layouts     map[string]*template.Template
-	mu          sync.RWMutex
-	cache       sync.Map // template cache
-	layoutCache sync.Map // layout chain cache
-	funcMap     template.FuncMap
+	templates     *template.Template
+	layouts       map[string]*template.Template
+	mu            sync.RWMutex
+	cache         sync.Map // template cache
+	layoutCache   sync.Map // layout chain cache
+	funcMap       template.FuncMap
+	exts          []string
+	commonLayouts []string
 }
 
 // New initializes a Template Engine with optimized caching and pre-compiled layouts
-func New(root string, fns template.FuncMap, exts ...string) (*Engine, error) {
+func New(root string, opts ...Option) (*Engine, error) {
 	if root == "" {
 		return nil, ErrNoTemplateDirectory
 	}
@@ -48,28 +50,18 @@ func New(root string, fns template.FuncMap, exts ...string) (*Engine, error) {
 	// Initialize engine
 	e := &Engine{
 		layouts: make(map[string]*template.Template),
-		funcMap: make(template.FuncMap),
+		funcMap: defaultFuncs(),
+		exts:    []string{".gohtml"},
 	}
 
-	// Combine function maps
-	baseFuncs := defaultFuncs()
-	for name, fn := range baseFuncs {
-		e.funcMap[name] = fn
-	}
-	if len(fns) > 0 {
-		for name, fn := range fns {
-			e.funcMap[name] = fn
-		}
+	// Apply options
+	for _, opt := range opts {
+		opt(e)
 	}
 
 	// Parse templates
 	tmpl := template.New("").Option("missingkey=zero").Funcs(e.funcMap)
-
-	if len(exts) == 0 {
-		exts = []string{".gohtml"}
-	}
-
-	if err := filepath.Walk(root, e.walkFunc(tmpl, root, exts)); err != nil {
+	if err := filepath.Walk(root, e.walkFunc(tmpl, root, e.exts)); err != nil {
 		return nil, errors.Join(ErrTemplateParsingFailed, err)
 	}
 
@@ -129,8 +121,7 @@ func (e *Engine) walkFunc(tmpl *template.Template, root string, exts []string) f
 
 // precompileCommonLayouts pre-compiles frequently used layouts
 func (e *Engine) precompileCommonLayouts() {
-	commonLayouts := []string{"base_layout.html", "app_layout.html"}
-	for _, layout := range commonLayouts {
+	for _, layout := range e.commonLayouts {
 		if t := e.templates.Lookup(layout); t != nil {
 			e.layouts[layout] = t
 		}
