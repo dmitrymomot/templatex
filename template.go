@@ -56,7 +56,9 @@ func New(root string, opts ...Option) (*Engine, error) {
 
 	// Apply options
 	for _, opt := range opts {
-		opt(e)
+		if opt != nil {
+			opt(e)
+		}
 	}
 
 	// Parse templates
