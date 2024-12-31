@@ -35,7 +35,7 @@ go get github.com/dmitrymomot/templatex
 import "github.com/dmitrymomot/templatex"
 
 // Initialize the template engine
-templ, err := templatex.New("templates/", nil)
+templ, err := templatex.New("templates/")
 if err != nil {
     panic(err)
 }
@@ -89,13 +89,13 @@ Templates can be nested using the `{{embed}}` function. This allows for flexible
 
 ```go
 // Render to http.ResponseWriter
-err := templ.Render(ctx, w, "pages/home.html", data, "app_layout.html", "base_layout.html")
+err := templ.Render(ctx, w, "pages/home", data, "app_layout", "base_layout")
 
 // Render to string
-str, err := templ.RenderString(ctx, "pages/home.html", data, "app_layout.html", "base_layout.html")
+str, err := templ.RenderString(ctx, "pages/home", data, "app_layout", "base_layout")
 
 // Render to template.HTML
-html, err := templ.RenderHTML(ctx, "pages/home.html", data, "app_layout.html", "base_layout.html")
+html, err := templ.RenderHTML(ctx, "pages/home", data, "app_layout", "base_layout")
 ```
 
 ### Internationalization (i18n)
@@ -167,7 +167,7 @@ customFuncs := template.FuncMap{
     },
 }
 
-templ, err := templatex.New("templates/", customFuncs)
+templ, err := templatex.New("templates/", templatex.WithFuncs(customFuncs))
 ```
 
 ## Example
@@ -187,7 +187,7 @@ func main() {
     r := chi.NewRouter()
 
     // Initialize templates
-    templ, _ := templatex.New("templates/", nil)
+    templ, _ := templatex.New("templates/")
 
     r.Get("/", func(w http.ResponseWriter, r *http.Request) {
         data := struct {
@@ -198,8 +198,8 @@ func main() {
             Username: "John Doe",
         }
 
-        err := templ.Render(r.Context(), w, "pages/home.html", data,
-            "app_layout.html", "base_layout.html")
+        err := templ.Render(r.Context(), w, "pages/home", data,
+            "app_layout", "base_layout")
         if err != nil {
             http.Error(w, err.Error(), http.StatusInternalServerError)
         }
