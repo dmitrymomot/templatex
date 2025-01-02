@@ -3,12 +3,15 @@ package templatex
 import (
 	"bytes"
 	"context"
+	"encoding/gob"
 	"errors"
 	"fmt"
+	"hash/fnv"
 	"html/template"
 	"io"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"sync"
 )
@@ -43,6 +46,7 @@ type Engine struct {
 	funcMap       template.FuncMap
 	exts          []string
 	commonLayouts []string
+	hardCache     bool
 }
 
 // New creates a new template engine instance with optimized caching and pre-compiled layouts.
@@ -208,8 +212,10 @@ func (e *Engine) Render(ctx context.Context, out io.Writer, name string, binding
 		return ErrTemplateEngineNotInitialized
 	}
 
+	// Generate unique cache key
+	cacheKey := generateCacheKey(e.hardCache, name, binding, layouts...)
+
 	// Try to get from cache first
-	cacheKey := fmt.Sprintf("%s-%v", name, layouts)
 	if cached, ok := e.cache.Load(cacheKey); ok {
 		if cachedContent, ok := cached.(string); ok {
 			_, err := io.WriteString(out, cachedContent)
@@ -272,6 +278,54 @@ func (e *Engine) Render(ctx context.Context, out io.Writer, name string, binding
 	// Write final output
 	_, err = io.WriteString(out, content)
 	return err
+}
+
+// generateCacheKey creates a unique cache key based on template name, layouts, and binding data
+func generateCacheKey(hardCache bool, name string, binding interface{}, layouts ...string) string {
+	// If hard caching is enabled, only use the template name and layouts
+	if hardCache {
+		return fmt.Sprintf("%s:%s", name, strings.Join(layouts, ":"))
+	}
+
+	h := fnv.New64a()
+
+	// Add template name
+	h.Write([]byte(name))
+
+	// Add layouts
+	if len(layouts) > 0 {
+		h.Write([]byte(strings.Join(layouts, ":")))
+	}
+
+	// Add hash of binding data
+	if binding != nil {
+		// Handle different types of binding data
+		switch v := binding.(type) {
+		case string:
+			h.Write([]byte(v))
+		case []byte:
+			h.Write(v)
+		case fmt.Stringer:
+			h.Write([]byte(v.String()))
+		default:
+			// For other types, use reflection to get a string representation
+			val := reflect.ValueOf(binding)
+			switch val.Kind() {
+			case reflect.Struct, reflect.Map, reflect.Slice, reflect.Array:
+				// Use gob encoding for complex types
+				var buf bytes.Buffer
+				enc := gob.NewEncoder(&buf)
+				// Ignore encoding errors and just use what we can get
+				_ = enc.Encode(binding)
+				h.Write(buf.Bytes())
+			default:
+				// For simple types, use fmt.Sprintf
+				h.Write([]byte(fmt.Sprintf("%v", binding)))
+			}
+		}
+	}
+
+	return fmt.Sprintf("%x", h.Sum64())
 }
 
 // executeTemplateWithFuncs safely executes a template with additional functions

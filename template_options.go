@@ -60,3 +60,15 @@ func WithLayouts(layouts ...string) Option {
 		}
 	}
 }
+
+// WithHardCache sets the hard caching behavior of the template engine.
+// When hard caching is enabled, rendered templates are cached permanently and only
+// re-rendered if the cache is manually cleared. This can significantly improve
+// performance for templates with static content, but should be used with caution
+// for dynamic content. When disabled (default), cache key includes template content,
+// layouts and data hash, so templates are only re-rendered when data changes.
+func WithHardCache(enabled bool) Option {
+	return func(e *Engine) {
+		e.hardCache = enabled
+	}
+}
