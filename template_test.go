@@ -705,7 +705,10 @@ func TestPrintIfFunctions(t *testing.T) {
 }
 
 func TestTemplateCache(t *testing.T) {
-	engine, err := templatex.New("example/templates/", templatex.WithExtensions(".gohtml"))
+	engine, err := templatex.New("example/templates/",
+		templatex.WithExtensions(".gohtml"),
+		templatex.WithHardCache(true),
+	)
 	require.NoError(t, err)
 	require.NotNil(t, engine)
 
