@@ -69,6 +69,17 @@ func WithLayouts(layouts ...string) Option {
 // layouts and data hash, so templates are only re-rendered when data changes.
 func WithHardCache(enabled bool) Option {
 	return func(e *Engine) {
-		e.hardCache = enabled
+		e.cacheEnable = enabled
+	}
+}
+
+// WithLayoutCache sets the layout caching behavior of the template engine.
+// When layout caching is enabled, computed layouts for templates are cached and reused.
+// This can improve performance by avoiding layout chain computation on subsequent renders.
+// When disabled, layouts are recomputed for each template render. Layout caching is
+// recommended for templates with stable layout relationships.
+func WithLayoutCache(enabled bool) Option {
+	return func(e *Engine) {
+		e.layoutCacheEnable = enabled
 	}
 }

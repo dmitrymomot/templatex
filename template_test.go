@@ -708,6 +708,8 @@ func TestTemplateCache(t *testing.T) {
 	engine, err := templatex.New("example/templates/",
 		templatex.WithExtensions(".gohtml"),
 		templatex.WithHardCache(true),
+		templatex.WithLayouts("base_layout"),
+		templatex.WithLayoutCache(true),
 	)
 	require.NoError(t, err)
 	require.NotNil(t, engine)

@@ -40,6 +40,7 @@ func BenchmarkTemplateRenderWithCache(b *testing.B) {
 			templ, err := templatex.New("example/templates/",
 				templatex.WithLayouts("app_layout", "base_layout"),
 				templatex.WithHardCache(bm.hardCache),
+				templatex.WithLayoutCache(bm.hardCache),
 			)
 			if err != nil {
 				b.Fatal(err)
@@ -91,6 +92,7 @@ func BenchmarkTemplateRenderParallelWithCache(b *testing.B) {
 			templ, err := templatex.New("example/templates/",
 				templatex.WithLayouts("app_layout", "base_layout"),
 				templatex.WithHardCache(bm.hardCache),
+				templatex.WithLayoutCache(bm.hardCache),
 			)
 			if err != nil {
 				b.Fatal(err)
@@ -207,6 +209,7 @@ func BenchmarkTemplateRenderString(b *testing.B) {
 			templ, err := templatex.New("example/templates/",
 				templatex.WithLayouts("app_layout", "base_layout"),
 				templatex.WithHardCache(bm.hardCache),
+				templatex.WithLayoutCache(bm.hardCache),
 			)
 			if err != nil {
 				b.Fatal(err)
@@ -256,6 +259,7 @@ func BenchmarkTemplateRenderHTML(b *testing.B) {
 			templ, err := templatex.New("example/templates/",
 				templatex.WithLayouts("app_layout", "base_layout"),
 				templatex.WithHardCache(bm.hardCache),
+				templatex.WithLayoutCache(bm.hardCache),
 			)
 			if err != nil {
 				b.Fatal(err)

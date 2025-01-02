@@ -38,15 +38,18 @@ type layoutChain struct {
 //   - Support for multiple file extensions
 //   - Common layout precompilation
 type Engine struct {
-	templates     *template.Template
-	layouts       map[string]*template.Template
-	mu            sync.RWMutex
-	cache         sync.Map // template cache
-	layoutCache   sync.Map // layout chain cache
-	funcMap       template.FuncMap
-	exts          []string
-	commonLayouts []string
-	hardCache     bool
+	mu      sync.RWMutex
+	funcMap template.FuncMap
+	exts    []string
+
+	templates   *template.Template
+	cache       sync.Map // template cache
+	cacheEnable bool
+
+	commonLayouts     []string                      // common layout templates to pre-compile
+	layouts           map[string]*template.Template // pre-compiled layout templates
+	layoutCache       sync.Map                      // layout chain cache
+	layoutCacheEnable bool                          // layout caching enabled
 }
 
 // New creates a new template engine instance with optimized caching and pre-compiled layouts.
@@ -170,8 +173,10 @@ func (e *Engine) getLayoutChain(layouts ...string) (*layoutChain, error) {
 	}
 
 	cacheKey := strings.Join(layouts, ":")
-	if cached, ok := e.layoutCache.Load(cacheKey); ok {
-		return cached.(*layoutChain), nil
+	if e.layoutCacheEnable {
+		if cached, ok := e.layoutCache.Load(cacheKey); ok {
+			return cached.(*layoutChain), nil
+		}
 	}
 
 	chain := &layoutChain{
@@ -186,7 +191,10 @@ func (e *Engine) getLayoutChain(layouts ...string) (*layoutChain, error) {
 		}
 	}
 
-	e.layoutCache.Store(cacheKey, chain)
+	if e.layoutCacheEnable {
+		e.layoutCache.Store(cacheKey, chain)
+	}
+
 	return chain, nil
 }
 
@@ -213,7 +221,7 @@ func (e *Engine) Render(ctx context.Context, out io.Writer, name string, binding
 	}
 
 	// Generate unique cache key
-	cacheKey := generateCacheKey(e.hardCache, name, binding, layouts...)
+	cacheKey := generateCacheKey(e.cacheEnable, name, binding, layouts...)
 
 	// Try to get from cache first
 	if cached, ok := e.cache.Load(cacheKey); ok {
