@@ -228,11 +228,29 @@ The package includes several optimizations:
 Benchmark results:
 
 ```
-BenchmarkTemplateRender-14                              2827134    421.7 ns/op    888 B/op    8 allocs/op
-BenchmarkTemplateRenderParallel-14                      2979015    399.2 ns/op    890 B/op    8 allocs/op
-BenchmarkTemplateRenderComplexity/SingleLayout-14       3339643    351.7 ns/op    704 B/op    6 allocs/op
-BenchmarkTemplateRenderComplexity/TwoLayouts-14         2798064    429.5 ns/op    856 B/op    7 allocs/op
-BenchmarkTemplateRenderComplexity/ThreeLayouts-14       2453024    487.0 ns/op    888 B/op    8 allocs/op
+go test -bench=. -benchmem .
+
+goos: darwin
+goarch: arm64
+pkg: github.com/dmitrymomot/templatex
+cpu: Apple M3 Max
+
+BenchmarkTemplateRenderWithCache/WithoutHardCache-14         	  577982	      1858 ns/op	    2145 B/op	      29 allocs/op
+BenchmarkTemplateRenderWithCache/WithHardCache-14            	 3807852	       314.5 ns/op	     840 B/op	       6 allocs/op
+BenchmarkTemplateRenderParallelWithCache/WithoutHardCache-14 	  930882	      1171 ns/op	    2148 B/op	      29 allocs/op
+BenchmarkTemplateRenderParallelWithCache/WithHardCache-14    	 3557242	       332.6 ns/op	     841 B/op	       6 allocs/op
+BenchmarkTemplateRenderComplexityWithCache/WithoutHardCache/SingleLayout-14         	  587005	      1896 ns/op	    1993 B/op	      28 allocs/op
+BenchmarkTemplateRenderComplexityWithCache/WithoutHardCache/TwoLayouts-14           	  591994	      1954 ns/op	    2145 B/op	      29 allocs/op
+BenchmarkTemplateRenderComplexityWithCache/WithoutHardCache/ThreeLayouts-14         	  596881	      1975 ns/op	    2153 B/op	      29 allocs/op
+BenchmarkTemplateRenderComplexityWithCache/WithHardCache/SingleLayout-14            	 4240288	       283.7 ns/op	     680 B/op	       5 allocs/op
+BenchmarkTemplateRenderComplexityWithCache/WithHardCache/TwoLayouts-14              	 3473145	       349.3 ns/op	     840 B/op	       6 allocs/op
+BenchmarkTemplateRenderComplexityWithCache/WithHardCache/ThreeLayouts-14            	 3312826	       362.4 ns/op	     864 B/op	       6 allocs/op
+BenchmarkTemplateRenderString/WithoutHardCache-14                                   	  564861	      1982 ns/op	    2147 B/op	      29 allocs/op
+BenchmarkTemplateRenderString/WithHardCache-14                                      	 3230229	       371.7 ns/op	     841 B/op	       6 allocs/op
+BenchmarkTemplateRenderHTML/WithoutHardCache-14                                     	  578750	      2080 ns/op	    2147 B/op	      29 allocs/op
+BenchmarkTemplateRenderHTML/WithHardCache-14                                        	 3294721	       370.6 ns/op	     841 B/op	       6 allocs/op
+PASS
+ok  	github.com/dmitrymomot/templatex	19.246s
 ```
 
 ## License
