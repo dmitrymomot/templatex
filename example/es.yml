@@ -1,3 +1,7 @@
 es:
+  greeting: "Hola, %{name}"
   welcome: "¡Bienvenido a nuestra increíble aplicación!"
-  greeting: "¡Hola, %{name}!"
+  layout:
+    title: "Título de Prueba"
+    header: "Encabezado de Prueba"
+    footer: "Pie de Página de Prueba"

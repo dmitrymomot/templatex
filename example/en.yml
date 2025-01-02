@@ -1,3 +1,7 @@
 en:
+  greeting: "Hello, %{name}"
   welcome: "Welcome to our awesome app!"
-  greeting: "Hello, %{name}!"
+  layout:
+    title: "Test Title"
+    header: "Test Header"
+    footer: "Test Footer"

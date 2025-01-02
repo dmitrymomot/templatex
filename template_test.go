@@ -743,3 +743,79 @@ func TestTemplateCache(t *testing.T) {
 	assert.Contains(t, secondResult, "John")    // Should contain original name
 	assert.NotContains(t, secondResult, "Jane") // Should not contain modified name
 }
+
+func TestTranslationInLayout(t *testing.T) {
+	// Setup test environment
+	engine, err := templatex.New("example/templates/", templatex.WithExtensions(".gohtml"))
+	require.NoError(t, err)
+	require.NotNil(t, engine)
+
+	// Load translations
+	err = ctxi18n.LoadWithDefault(testTranslations, "en")
+	require.NoError(t, err)
+
+	// Test cases for different languages
+	tests := []struct {
+		name     string
+		locale   string
+		expected map[string]string
+	}{
+		{
+			name:   "English translations",
+			locale: "en",
+			expected: map[string]string{
+				"title":    "Test Title",
+				"header":   "Test Header",
+				"footer":   "Test Footer",
+				"greeting": "Hello, John",
+				"welcome":  "Welcome to our awesome app!",
+			},
+		},
+		{
+			name:   "Spanish translations",
+			locale: "es",
+			expected: map[string]string{
+				"title":    "Título de Prueba",
+				"header":   "Encabezado de Prueba",
+				"footer":   "Pie de Página de Prueba",
+				"greeting": "Hola, John",
+				"welcome":  "¡Bienvenido a nuestra increíble aplicación!",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Create context with locale
+			ctx, err := ctxi18n.WithLocale(context.Background(), tt.locale)
+			require.NoError(t, err)
+
+			// Render the template with the trans_layout
+			var buf bytes.Buffer
+			err = engine.Render(ctx, &buf, "greeter", pageData{
+				Title:    "Test Page",
+				Username: "John",
+				Test:     "Test Message",
+			}, "trans_layout")
+			require.NoError(t, err)
+
+			// Verify that translations are present in the output
+			result := buf.String()
+			for key, expectedText := range tt.expected {
+				assert.Contains(t, result, expectedText,
+					"Translation for '%s' not found in %s locale", key, tt.locale)
+			}
+
+			// Verify that translations from other locales are not present
+			for _, otherTest := range tests {
+				if otherTest.locale != tt.locale {
+					for _, unexpectedText := range otherTest.expected {
+						assert.NotContains(t, result, unexpectedText,
+							"Found translation from %s locale in %s locale output",
+							otherTest.locale, tt.locale)
+					}
+				}
+			}
+		})
+	}
+}
