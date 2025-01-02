@@ -14,6 +14,8 @@ import (
 	"reflect"
 	"strings"
 	"sync"
+
+	"github.com/invopop/ctxi18n"
 )
 
 var bufferPool = sync.Pool{
@@ -220,8 +222,14 @@ func (e *Engine) Render(ctx context.Context, out io.Writer, name string, binding
 		return ErrTemplateEngineNotInitialized
 	}
 
+	// Get locale from context
+	locale := "en"
+	if l := ctxi18n.Locale(ctx); l != nil {
+		locale = l.Code().String()
+	}
+
 	// Generate unique cache key
-	cacheKey := generateCacheKey(e.cacheEnable, name, binding, layouts...)
+	cacheKey := generateCacheKey(e.cacheEnable, locale, name, binding, layouts...)
 
 	// Try to get from cache first
 	if cached, ok := e.cache.Load(cacheKey); ok {
@@ -246,13 +254,13 @@ func (e *Engine) Render(ctx context.Context, out io.Writer, name string, binding
 	}
 
 	// Create a new template with context-specific functions
-	localFuncs := template.FuncMap{
+	contextFuncs := template.FuncMap{
 		"T":      getTranslator(ctx),
 		"ctxVal": ctxValue(ctx),
 	}
 
 	// Execute the base template
-	if err := executeTemplateWithFuncs(baseTmpl, buf, binding, localFuncs); err != nil {
+	if err := executeTemplateWithFuncs(baseTmpl, buf, binding, contextFuncs); err != nil {
 		return errors.Join(ErrTemplateExecutionFailed, err)
 	}
 
@@ -267,13 +275,18 @@ func (e *Engine) Render(ctx context.Context, out io.Writer, name string, binding
 	for _, layoutTmpl := range chain.templates {
 		buf.Reset()
 
-		embedFunc := template.FuncMap{
+		layoutFuncs := template.FuncMap{
 			"embed": func() template.HTML {
 				return template.HTML(content)
 			},
 		}
 
-		if err := executeTemplateWithFuncs(layoutTmpl, buf, binding, embedFunc); err != nil {
+		// Merge contextFuncs into layoutFuncs
+		for name, fn := range contextFuncs {
+			layoutFuncs[name] = fn
+		}
+
+		if err := executeTemplateWithFuncs(layoutTmpl, buf, binding, layoutFuncs); err != nil {
 			return errors.Join(ErrTemplateExecutionFailed, err)
 		}
 
@@ -289,16 +302,18 @@ func (e *Engine) Render(ctx context.Context, out io.Writer, name string, binding
 }
 
 // generateCacheKey creates a unique cache key based on template name, layouts, and binding data
-func generateCacheKey(hardCache bool, name string, binding interface{}, layouts ...string) string {
+func generateCacheKey(hardCache bool, locale, name string, binding interface{}, layouts ...string) string {
+	baseKey := fmt.Sprintf("%s:%s:", locale, name)
+
 	// If hard caching is enabled, only use the template name and layouts
 	if hardCache {
-		return fmt.Sprintf("%s:%s", name, strings.Join(layouts, ":"))
+		return fmt.Sprintf("%s:%s", baseKey, strings.Join(layouts, ":"))
 	}
 
 	h := fnv.New64a()
 
 	// Add template name
-	h.Write([]byte(name))
+	h.Write([]byte(baseKey))
 
 	// Add layouts
 	if len(layouts) > 0 {
