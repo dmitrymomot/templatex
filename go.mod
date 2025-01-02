@@ -3,10 +3,10 @@ module github.com/dmitrymomot/templatex
 go 1.22
 
 require (
-	github.com/go-chi/chi/v5 v5.1.0
-	github.com/invopop/ctxi18n v0.8.1
+	github.com/go-chi/chi/v5 v5.2.0
+	github.com/invopop/ctxi18n v0.9.0
 	github.com/stretchr/testify v1.9.0
-	golang.org/x/text v0.20.0
+	golang.org/x/text v0.21.0
 )
 
 require (
