@@ -5,8 +5,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"html/template"
+	"math"
 	"reflect"
+	"regexp"
+	"strconv"
 	"strings"
+	"time"
+	"unicode"
 
 	"github.com/invopop/ctxi18n"
 	"github.com/invopop/ctxi18n/i18n"
@@ -17,72 +22,228 @@ import (
 // defaultFuncs returns a FuncMap with default functions
 func defaultFuncs() template.FuncMap {
 	return template.FuncMap{
-		"upper": func(s string) string {
-			return strings.ToUpper(s)
-		},
-		"lower": func(s string) string {
-			return strings.ToLower(s)
-		},
-		"title": func(s string) string {
-			return cases.Title(language.Und).String(s)
-		},
-		"tern": func(cond bool, t, f interface{}) interface{} {
-			if cond {
-				return t
-			}
-			return f
-		},
-		"trim": func(s string) string {
-			return strings.TrimSpace(s)
-		},
-		"replace": func(s, old, new string) string {
-			return strings.ReplaceAll(s, old, new)
-		},
-		"split": func(s, sep string) []string {
-			return strings.Split(s, sep)
-		},
-		"join": join,
-		"contains": func(s, substr string) bool {
-			return strings.Contains(s, substr)
-		},
-		"hasPrefix": func(s, prefix string) bool {
-			return strings.HasPrefix(s, prefix)
-		},
-		"hasSuffix": func(s, suffix string) bool {
-			return strings.HasSuffix(s, suffix)
-		},
-		"repeat": func(s string, count int) string {
-			return strings.Repeat(s, count)
-		},
-		"len": func(v interface{}) int {
-			switch val := v.(type) {
-			case string:
-				return len(val)
-			case []interface{}:
-				return len(val)
-			case map[string]interface{}:
-				return len(val)
-			default:
-				return 0
-			}
-		},
-		"htmlSafe": func(html string) template.HTML {
-			return template.HTML(html)
-		},
+		// String functions
+		"upper":      upperString,
+		"lower":      lowerString,
+		"title":      titleString,
+		"trim":       trimString,
+		"replace":    replaceString,
+		"split":      splitString,
+		"join":       join,
+		"contains":   containsString,
+		"hasPrefix":  hasPrefixString,
+		"hasSuffix":  hasSuffixString,
+		"repeat":     repeatString,
+		"truncate":   truncateString,
+		"camelCase":  toCamelCase,
+		"snakeCase":  toSnakeCase,
+		"kebabCase":  toKebabCase,
+		"slugify":    slugify,
+		"matches":    regexMatches,
+		"replaceAll": regexReplaceAll,
+
+		// Type manipulation
+		"len":          getLength,
+		"tern":         ternary,
+		"isset":        isSet,
+		"boolToString": boolToStr,
 		"default":      defaultValue,
 		"safeField":    safeField,
-		"debug":        prettyPrint,
-		"isset":        func(v interface{}) bool { return v != nil },
-		"boolToString": func(b bool) string { return fmt.Sprintf("%t", b) },
-		"printIf":      printIf,
-		"printIfElse":  printIfElse,
+		"toString":     toString,
+		"toInt":        toInt,
+		"toFloat":      toFloat,
+		"toBool":       toBool,
+		"toJSON":       toJSON,
+		"fromJSON":     fromJSON,
 
-		// Placeholders for context-related functions.
-		// These should be replaced with actual functions in your application
-		"embed":  func() template.HTML { return "" },                  // placeholder function
-		"T":      func(key string, args ...any) string { return key }, // placeholder function with variadic args
-		"ctxVal": func(key string) string { return "" },
+		// Math functions
+		"add":      add,
+		"sub":      sub,
+		"mul":      mul,
+		"div":      div,
+		"mod":      mod,
+		"max":      max,
+		"min":      min,
+		"abs":      abs,
+		"ceil":     ceil,
+		"floor":    floor,
+		"round":    round,
+		"sum":      sum,
+		"avg":      avg,
+		"sequence": sequence,
+
+		// Date/Time functions
+		"now":           now,
+		"formatTime":    formatTime,
+		"parseTime":     parseTime,
+		"addDate":       addDate,
+		"subDate":       subDate,
+		"dateEqual":     dateEqual,
+		"dateBefore":    dateBefore,
+		"dateAfter":     dateAfter,
+		"dateBetween":   dateBetween,
+		"toUTC":         toUTC,
+		"toLocal":       toLocal,
+		"unix":          unixTimestamp,
+		"unixMilli":     unixMilliTimestamp,
+		"durationParse": parseDuration,
+
+		// Debug functions
+		"debug":       prettyPrint,
+		"printIf":     printIf,
+		"printIfElse": printIfElse,
+
+		// HTML functions
+		"htmlSafe": toHTML,
+
+		// Placeholders for context-related functions
+		"embed":  emptyHTML,
+		"T":      translate,
+		"ctxVal": contextValue,
 	}
+}
+
+// String manipulation functions
+func upperString(s string) string {
+	return strings.ToUpper(s)
+}
+
+func lowerString(s string) string {
+	return strings.ToLower(s)
+}
+
+func titleString(s string) string {
+	return cases.Title(language.Und).String(s)
+}
+
+func trimString(s string) string {
+	return strings.TrimSpace(s)
+}
+
+func replaceString(s, old, new string) string {
+	return strings.ReplaceAll(s, old, new)
+}
+
+func splitString(s, sep string) []string {
+	return strings.Split(s, sep)
+}
+
+func containsString(s, substr string) bool {
+	return strings.Contains(s, substr)
+}
+
+func hasPrefixString(s, prefix string) bool {
+	return strings.HasPrefix(s, prefix)
+}
+
+func hasSuffixString(s, suffix string) bool {
+	return strings.HasSuffix(s, suffix)
+}
+
+func repeatString(s string, count int) string {
+	return strings.Repeat(s, count)
+}
+
+func truncateString(length, str string) string {
+	l, err := strconv.Atoi(length)
+	if err != nil {
+		return str
+	}
+	if len(str) <= l {
+		return str
+	}
+	return str[:l] + "..."
+}
+
+func toCamelCase(s string) string {
+	words := strings.FieldsFunc(s, func(r rune) bool {
+		return r == '_' || r == '-' || r == ' '
+	})
+	for i := 1; i < len(words); i++ {
+		words[i] = strings.Title(words[i])
+	}
+	return strings.Join(words, "")
+}
+
+func toSnakeCase(s string) string {
+	var result strings.Builder
+	for i, r := range s {
+		if i > 0 && (unicode.IsUpper(r) || unicode.IsNumber(r)) {
+			result.WriteRune('_')
+		}
+		result.WriteRune(unicode.ToLower(r))
+	}
+	return result.String()
+}
+
+func toKebabCase(s string) string {
+	return strings.ReplaceAll(toSnakeCase(s), "_", "-")
+}
+
+func slugify(s string) string {
+	// Convert to lowercase
+	s = strings.ToLower(s)
+	// Replace special characters with -
+	reg := regexp.MustCompile("[^a-z0-9]+")
+	s = reg.ReplaceAllString(s, "-")
+	// Remove leading/trailing -
+	s = strings.Trim(s, "-")
+	return s
+}
+
+func regexMatches(pattern, s string) bool {
+	matched, _ := regexp.MatchString(pattern, s)
+	return matched
+}
+
+func regexReplaceAll(pattern, repl, s string) string {
+	reg := regexp.MustCompile(pattern)
+	return reg.ReplaceAllString(s, repl)
+}
+
+// Type manipulation functions
+func ternary(cond bool, t, f interface{}) interface{} {
+	if cond {
+		return t
+	}
+	return f
+}
+
+func getLength(v interface{}) int {
+	switch val := v.(type) {
+	case string:
+		return len(val)
+	case []interface{}:
+		return len(val)
+	case map[string]interface{}:
+		return len(val)
+	default:
+		return 0
+	}
+}
+
+func isSet(v interface{}) bool {
+	return v != nil
+}
+
+func boolToStr(b bool) string {
+	return fmt.Sprintf("%t", b)
+}
+
+func toHTML(html string) template.HTML {
+	return template.HTML(html)
+}
+
+func emptyHTML() template.HTML {
+	return ""
+}
+
+func translate(key string, args ...any) string {
+	return key
+}
+
+func contextValue(key string) string {
+	return ""
 }
 
 // getTranslator returns a translator function from context or falls back to returning the key
@@ -239,4 +400,195 @@ func join(sep string, v interface{}) string {
 		strs = []string{fmt.Sprint(v)}
 	}
 	return strings.Join(strs, sep)
+}
+
+// Type conversion functions
+func toString(v interface{}) string {
+	return fmt.Sprintf("%v", v)
+}
+
+func toInt(v interface{}) int {
+	switch val := v.(type) {
+	case int:
+		return val
+	case float64:
+		return int(val)
+	case string:
+		i, _ := strconv.Atoi(val)
+		return i
+	default:
+		return 0
+	}
+}
+
+func toFloat(v interface{}) float64 {
+	switch val := v.(type) {
+	case float64:
+		return val
+	case int:
+		return float64(val)
+	case string:
+		f, _ := strconv.ParseFloat(val, 64)
+		return f
+	default:
+		return 0
+	}
+}
+
+func toBool(v interface{}) bool {
+	switch val := v.(type) {
+	case bool:
+		return val
+	case string:
+		b, _ := strconv.ParseBool(val)
+		return b
+	case int:
+		return val != 0
+	case float64:
+		return val != 0
+	default:
+		return false
+	}
+}
+
+func toJSON(v interface{}) template.HTML {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return ""
+	}
+	return template.HTML(b)
+}
+
+func fromJSON(s string) interface{} {
+	var v interface{}
+	_ = json.Unmarshal([]byte(s), &v)
+	return v
+}
+
+// Math functions
+func add(a, b interface{}) float64 {
+	return toFloat(a) + toFloat(b)
+}
+
+func sub(a, b interface{}) float64 {
+	return toFloat(a) - toFloat(b)
+}
+
+func mul(a, b interface{}) float64 {
+	return toFloat(a) * toFloat(b)
+}
+
+func div(a, b interface{}) float64 {
+	return toFloat(a) / toFloat(b)
+}
+
+func mod(a, b interface{}) float64 {
+	return float64(int(toFloat(a)) % int(toFloat(b)))
+}
+
+func max(a, b interface{}) float64 {
+	return math.Max(toFloat(a), toFloat(b))
+}
+
+func min(a, b interface{}) float64 {
+	return math.Min(toFloat(a), toFloat(b))
+}
+
+func abs(a interface{}) float64 {
+	return math.Abs(toFloat(a))
+}
+
+func ceil(a interface{}) float64 {
+	return math.Ceil(toFloat(a))
+}
+
+func floor(a interface{}) float64 {
+	return math.Floor(toFloat(a))
+}
+
+func round(a interface{}) float64 {
+	return math.Round(toFloat(a))
+}
+
+func sum(numbers ...interface{}) float64 {
+	var total float64
+	for _, n := range numbers {
+		total += toFloat(n)
+	}
+	return total
+}
+
+func avg(numbers ...interface{}) float64 {
+	if len(numbers) == 0 {
+		return 0
+	}
+	return sum(numbers...) / float64(len(numbers))
+}
+
+func sequence(start, end int) []int {
+	if start > end {
+		return nil
+	}
+	seq := make([]int, end-start+1)
+	for i := range seq {
+		seq[i] = start + i
+	}
+	return seq
+}
+
+// Date/Time functions
+func now() time.Time {
+	return time.Now()
+}
+
+func formatTime(t time.Time, layout string) string {
+	return t.Format(layout)
+}
+
+func parseTime(value, layout string) (time.Time, error) {
+	return time.Parse(layout, value)
+}
+
+func addDate(t time.Time, years, months, days int) time.Time {
+	return t.AddDate(years, months, days)
+}
+
+func subDate(t time.Time, years, months, days int) time.Time {
+	return t.AddDate(-years, -months, -days)
+}
+
+func dateEqual(a, b time.Time) bool {
+	return a.Equal(b)
+}
+
+func dateBefore(a, b time.Time) bool {
+	return a.Before(b)
+}
+
+func dateAfter(a, b time.Time) bool {
+	return a.After(b)
+}
+
+func dateBetween(t, start, end time.Time) bool {
+	return (t.After(start) || t.Equal(start)) && (t.Before(end) || t.Equal(end))
+}
+
+func toUTC(t time.Time) time.Time {
+	return t.UTC()
+}
+
+func toLocal(t time.Time) time.Time {
+	return t.Local()
+}
+
+func unixTimestamp(t time.Time) int64 {
+	return t.Unix()
+}
+
+func unixMilliTimestamp(t time.Time) int64 {
+	return t.UnixMilli()
+}
+
+func parseDuration(s string) (time.Duration, error) {
+	return time.ParseDuration(s)
 }
