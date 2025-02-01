@@ -159,8 +159,9 @@ func toCamelCase(s string) string {
 	words := strings.FieldsFunc(s, func(r rune) bool {
 		return r == '_' || r == '-' || r == ' '
 	})
+	caser := cases.Title(language.Und)
 	for i := 1; i < len(words); i++ {
-		words[i] = strings.Title(words[i])
+		words[i] = caser.String(words[i])
 	}
 	return strings.Join(words, "")
 }
