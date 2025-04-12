@@ -6,11 +6,18 @@ import (
 	"testing"
 
 	"github.com/dmitrymomot/templatex"
-	"github.com/invopop/ctxi18n"
 )
 
 //go:embed example/*.yml
 var translations embed.FS
+
+// Use "locale" as the context key since that's what the template engine expects
+var localeKey = "locale"
+
+// Create a simple benchmark translator that returns the key
+func benchmarkTranslator(lang, key string, args ...string) string {
+	return key
+}
 
 type pageData struct {
 	Title    string
@@ -41,15 +48,13 @@ func BenchmarkTemplateRenderWithCache(b *testing.B) {
 				templatex.WithLayouts("app_layout", "base_layout"),
 				templatex.WithHardCache(bm.hardCache),
 				templatex.WithLayoutCache(bm.hardCache),
+				templatex.WithTranslator(benchmarkTranslator),
 			)
 			if err != nil {
 				b.Fatal(err)
 			}
 
-			// Load translations
-			if err := ctxi18n.LoadWithDefault(translations, "en"); err != nil {
-				b.Fatal(err)
-			}
+			// No need to load translations anymore
 
 			// Setup test data
 			data := pageData{
@@ -59,10 +64,7 @@ func BenchmarkTemplateRenderWithCache(b *testing.B) {
 			}
 
 			// Create a context with locale
-			ctx, err := ctxi18n.WithLocale(context.Background(), "en")
-			if err != nil {
-				b.Fatal(err)
-			}
+			ctx := context.WithValue(context.Background(), localeKey, "en")
 
 			w := &mockWriter{}
 
@@ -93,15 +95,13 @@ func BenchmarkTemplateRenderParallelWithCache(b *testing.B) {
 				templatex.WithLayouts("app_layout", "base_layout"),
 				templatex.WithHardCache(bm.hardCache),
 				templatex.WithLayoutCache(bm.hardCache),
+				templatex.WithTranslator(benchmarkTranslator),
 			)
 			if err != nil {
 				b.Fatal(err)
 			}
 
-			// Load translations
-			if err := ctxi18n.LoadWithDefault(translations, "en"); err != nil {
-				b.Fatal(err)
-			}
+			// No need to load translations anymore
 
 			// Setup test data
 			data := pageData{
@@ -111,10 +111,7 @@ func BenchmarkTemplateRenderParallelWithCache(b *testing.B) {
 			}
 
 			// Create a context with locale
-			ctx, err := ctxi18n.WithLocale(context.Background(), "en")
-			if err != nil {
-				b.Fatal(err)
-			}
+			ctx := context.WithValue(context.Background(), localeKey, "en")
 
 			b.ResetTimer()
 			b.RunParallel(func(pb *testing.PB) {
@@ -156,15 +153,13 @@ func BenchmarkTemplateRenderComplexityWithCache(b *testing.B) {
 					templ, err := templatex.New("example/templates/",
 						templatex.WithLayouts("app_layout", "base_layout"),
 						templatex.WithHardCache(cache.hardCache),
+						templatex.WithTranslator(benchmarkTranslator),
 					)
 					if err != nil {
 						b.Fatal(err)
 					}
 
-					// Load translations
-					if err := ctxi18n.LoadWithDefault(translations, "en"); err != nil {
-						b.Fatal(err)
-					}
+					// No need to load translations anymore
 
 					// Setup test data
 					data := pageData{
@@ -174,10 +169,7 @@ func BenchmarkTemplateRenderComplexityWithCache(b *testing.B) {
 					}
 
 					// Create a context with locale
-					ctx, err := ctxi18n.WithLocale(context.Background(), "en")
-					if err != nil {
-						b.Fatal(err)
-					}
+					ctx := context.WithValue(context.Background(), localeKey, "en")
 
 					w := &mockWriter{}
 
@@ -210,15 +202,13 @@ func BenchmarkTemplateRenderString(b *testing.B) {
 				templatex.WithLayouts("app_layout", "base_layout"),
 				templatex.WithHardCache(bm.hardCache),
 				templatex.WithLayoutCache(bm.hardCache),
+				templatex.WithTranslator(benchmarkTranslator),
 			)
 			if err != nil {
 				b.Fatal(err)
 			}
 
-			// Load translations
-			if err := ctxi18n.LoadWithDefault(translations, "en"); err != nil {
-				b.Fatal(err)
-			}
+			// No need to load translations anymore
 
 			// Setup test data
 			data := pageData{
@@ -228,10 +218,7 @@ func BenchmarkTemplateRenderString(b *testing.B) {
 			}
 
 			// Create a context with locale
-			ctx, err := ctxi18n.WithLocale(context.Background(), "en")
-			if err != nil {
-				b.Fatal(err)
-			}
+			ctx := context.WithValue(context.Background(), localeKey, "en")
 
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
@@ -260,15 +247,13 @@ func BenchmarkTemplateRenderHTML(b *testing.B) {
 				templatex.WithLayouts("app_layout", "base_layout"),
 				templatex.WithHardCache(bm.hardCache),
 				templatex.WithLayoutCache(bm.hardCache),
+				templatex.WithTranslator(benchmarkTranslator),
 			)
 			if err != nil {
 				b.Fatal(err)
 			}
 
-			// Load translations
-			if err := ctxi18n.LoadWithDefault(translations, "en"); err != nil {
-				b.Fatal(err)
-			}
+			// No need to load translations anymore
 
 			// Setup test data
 			data := pageData{
@@ -278,10 +263,7 @@ func BenchmarkTemplateRenderHTML(b *testing.B) {
 			}
 
 			// Create a context with locale
-			ctx, err := ctxi18n.WithLocale(context.Background(), "en")
-			if err != nil {
-				b.Fatal(err)
-			}
+			ctx := context.WithValue(context.Background(), localeKey, "en")
 
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
