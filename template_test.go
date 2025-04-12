@@ -3,7 +3,6 @@ package templatex_test
 import (
 	"bytes"
 	"context"
-	"embed"
 	"html/template"
 	"os"
 	"path/filepath"
@@ -17,9 +16,6 @@ import (
 
 // We'll use "locale" as the context key since that's what the template engine expects
 var langKey = "locale"
-
-//go:embed example/*.yml
-var testTranslations embed.FS
 
 func TestNew(t *testing.T) {
 	tests := []struct {
@@ -747,32 +743,41 @@ func TestTemplateCache(t *testing.T) {
 	assert.NotContains(t, secondResult, "Jane") // Should not contain modified name
 }
 
+// LangKey is a custom type for language keys to avoid SA1029 linter error
+type LangKey string
+
+// TransKey is a custom type for translation keys to avoid SA1029 linter error
+type TransKey string
+
+// DisplayKey is a custom type for display keys to avoid SA1029 linter error
+type DisplayKey string
+
 func TestTranslationInLayout(t *testing.T) {
 	// Setup test environment
 	
 	// Create a custom translator that uses ctxi18n
 	customTranslator := func(lang, key string, args ...string) string {
 		// Create map of expected translations for testing
-		translations := map[string]map[string]string{
-			"en": {
-				"layout.title":  "Test Title",
-				"layout.header": "Test Header",
-				"layout.footer": "Test Footer",
-				"greeting":      "Hello, John",
-				"welcome":       "Welcome to our awesome app!",
+		translations := map[LangKey]map[TransKey]string{
+			LangKey("en"): {
+				TransKey("layout.title"):  "Test Title",
+				TransKey("layout.header"): "Test Header",
+				TransKey("layout.footer"): "Test Footer",
+				TransKey("greeting"):      "Hello, John",
+				TransKey("welcome"):       "Welcome to our awesome app!",
 			},
-			"es": {
-				"layout.title":  "Título de Prueba",
-				"layout.header": "Encabezado de Prueba",
-				"layout.footer": "Pie de Página de Prueba",
-				"greeting":      "Hola, John",
-				"welcome":       "¡Bienvenido a nuestra increíble aplicación!",
+			LangKey("es"): {
+				TransKey("layout.title"):  "Título de Prueba",
+				TransKey("layout.header"): "Encabezado de Prueba",
+				TransKey("layout.footer"): "Pie de Página de Prueba",
+				TransKey("greeting"):      "Hola, John",
+				TransKey("welcome"):       "¡Bienvenido a nuestra increíble aplicación!",
 			},
 		}
 		
 		// Return translation based on language and key
-		if langTranslations, ok := translations[lang]; ok {
-			if translation, ok := langTranslations[key]; ok {
+		if langTranslations, ok := translations[LangKey(lang)]; ok {
+			if translation, ok := langTranslations[TransKey(key)]; ok {
 				return translation
 			}
 		}
@@ -794,28 +799,28 @@ func TestTranslationInLayout(t *testing.T) {
 	tests := []struct {
 		name     string
 		locale   string
-		expected map[string]string
+		expected map[DisplayKey]string
 	}{
 		{
 			name:   "English translations",
 			locale: "en",
-			expected: map[string]string{
-				"title":    "Test Title",
-				"header":   "Test Header",
-				"footer":   "Test Footer",
-				"greeting": "Hello, John",
-				"welcome":  "Welcome to our awesome app!",
+			expected: map[DisplayKey]string{
+				DisplayKey("title"):    "Test Title",
+				DisplayKey("header"):   "Test Header",
+				DisplayKey("footer"):   "Test Footer",
+				DisplayKey("greeting"): "Hello, John",
+				DisplayKey("welcome"):  "Welcome to our awesome app!",
 			},
 		},
 		{
 			name:   "Spanish translations",
 			locale: "es",
-			expected: map[string]string{
-				"title":    "Título de Prueba",
-				"header":   "Encabezado de Prueba",
-				"footer":   "Pie de Página de Prueba",
-				"greeting": "Hola, John",
-				"welcome":  "¡Bienvenido a nuestra increíble aplicación!",
+			expected: map[DisplayKey]string{
+				DisplayKey("title"):    "Título de Prueba",
+				DisplayKey("header"):   "Encabezado de Prueba",
+				DisplayKey("footer"):   "Pie de Página de Prueba",
+				DisplayKey("greeting"): "Hola, John",
+				DisplayKey("welcome"):  "¡Bienvenido a nuestra increíble aplicación!",
 			},
 		},
 	}
@@ -838,7 +843,7 @@ func TestTranslationInLayout(t *testing.T) {
 			result := buf.String()
 			for key, expectedText := range tt.expected {
 				assert.Contains(t, result, expectedText,
-					"Translation for '%s' not found in %s locale", key, tt.locale)
+					"Translation for '%s' not found in %s locale", string(key), tt.locale)
 			}
 
 			// Verify that translations from other locales are not present
