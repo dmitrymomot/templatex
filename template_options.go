@@ -28,7 +28,7 @@ func WithFuncs(fns template.FuncMap) Option {
 // The provided function will be added to the Engine's function map, making it
 // accessible within templates. An existing function with the same name will be
 // overwritten.
-func WithFunc(name string, fn interface{}) Option {
+func WithFunc(name string, fn any) Option {
 	return func(e *Engine) {
 		e.funcMap[name] = fn
 	}

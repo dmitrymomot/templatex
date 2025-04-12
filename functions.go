@@ -203,27 +203,27 @@ func regexReplaceAll(pattern, repl, s string) string {
 }
 
 // Type manipulation functions
-func ternary(cond bool, t, f interface{}) interface{} {
+func ternary(cond bool, t, f any) any {
 	if cond {
 		return t
 	}
 	return f
 }
 
-func getLength(v interface{}) int {
+func getLength(v any) int {
 	switch val := v.(type) {
 	case string:
 		return len(val)
-	case []interface{}:
+	case []any:
 		return len(val)
-	case map[string]interface{}:
+	case map[string]any:
 		return len(val)
 	default:
 		return 0
 	}
 }
 
-func isSet(v interface{}) bool {
+func isSet(v any) bool {
 	return v != nil
 }
 
@@ -284,7 +284,7 @@ func ctxValue(ctx context.Context) func(key string) string {
 }
 
 // safeField returns the value of a field from a struct if it exists and is accessible
-func safeField(data interface{}, field string, fallback ...string) string {
+func safeField(data any, field string, fallback ...string) string {
 	v := reflect.ValueOf(data)
 	if v.Kind() == reflect.Struct {
 		f := v.FieldByName(field)
@@ -300,7 +300,7 @@ func safeField(data interface{}, field string, fallback ...string) string {
 
 // defaultValue returns the default value if the value is nil, empty, or zero.
 // Usage: {{ .Value | default "default value" }}
-func defaultValue(defaultValue, value interface{}) interface{} {
+func defaultValue(defaultValue, value any) any {
 	// Handle nil case first
 	if value == nil {
 		return defaultValue
@@ -353,7 +353,7 @@ func defaultValue(defaultValue, value interface{}) interface{} {
 // prettyPrint returns a pretty-printed JSON string of the given value.
 // If the value cannot be marshaled to JSON, it returns the value as a string.
 // This function is useful for debugging purposes.
-func prettyPrint(v interface{}) string {
+func prettyPrint(v any) string {
 	b, err := json.MarshalIndent(v, "", "  ")
 	if err != nil {
 		return fmt.Sprintf("%+v", v)
@@ -381,12 +381,12 @@ func printIfElse(cond bool, data, elseData any) string {
 }
 
 // reversed parameters is required to support variadic functions
-func join(sep string, v interface{}) string {
+func join(sep string, v any) string {
 	var strs []string
 	switch slice := v.(type) {
 	case []string:
 		strs = slice
-	case []interface{}:
+	case []any:
 		strs = make([]string, len(slice))
 		for i, v := range slice {
 			strs[i] = fmt.Sprint(v)
@@ -404,11 +404,11 @@ func join(sep string, v interface{}) string {
 }
 
 // Type conversion functions
-func toString(v interface{}) string {
+func toString(v any) string {
 	return fmt.Sprintf("%v", v)
 }
 
-func toInt(v interface{}) int {
+func toInt(v any) int {
 	switch val := v.(type) {
 	case int:
 		return val
@@ -422,7 +422,7 @@ func toInt(v interface{}) int {
 	}
 }
 
-func toFloat(v interface{}) float64 {
+func toFloat(v any) float64 {
 	switch val := v.(type) {
 	case float64:
 		return val
@@ -436,7 +436,7 @@ func toFloat(v interface{}) float64 {
 	}
 }
 
-func toBool(v interface{}) bool {
+func toBool(v any) bool {
 	switch val := v.(type) {
 	case bool:
 		return val
@@ -452,7 +452,7 @@ func toBool(v interface{}) bool {
 	}
 }
 
-func toJSON(v interface{}) template.HTML {
+func toJSON(v any) template.HTML {
 	b, err := json.Marshal(v)
 	if err != nil {
 		return ""
@@ -460,58 +460,58 @@ func toJSON(v interface{}) template.HTML {
 	return template.HTML(b)
 }
 
-func fromJSON(s string) interface{} {
-	var v interface{}
+func fromJSON(s string) any {
+	var v any
 	_ = json.Unmarshal([]byte(s), &v)
 	return v
 }
 
 // Math functions
-func add(a, b interface{}) float64 {
+func add(a, b any) float64 {
 	return toFloat(a) + toFloat(b)
 }
 
-func sub(a, b interface{}) float64 {
+func sub(a, b any) float64 {
 	return toFloat(a) - toFloat(b)
 }
 
-func mul(a, b interface{}) float64 {
+func mul(a, b any) float64 {
 	return toFloat(a) * toFloat(b)
 }
 
-func div(a, b interface{}) float64 {
+func div(a, b any) float64 {
 	return toFloat(a) / toFloat(b)
 }
 
-func mod(a, b interface{}) float64 {
+func mod(a, b any) float64 {
 	return float64(int(toFloat(a)) % int(toFloat(b)))
 }
 
-func max(a, b interface{}) float64 {
+func max(a, b any) float64 {
 	return math.Max(toFloat(a), toFloat(b))
 }
 
-func min(a, b interface{}) float64 {
+func min(a, b any) float64 {
 	return math.Min(toFloat(a), toFloat(b))
 }
 
-func abs(a interface{}) float64 {
+func abs(a any) float64 {
 	return math.Abs(toFloat(a))
 }
 
-func ceil(a interface{}) float64 {
+func ceil(a any) float64 {
 	return math.Ceil(toFloat(a))
 }
 
-func floor(a interface{}) float64 {
+func floor(a any) float64 {
 	return math.Floor(toFloat(a))
 }
 
-func round(a interface{}) float64 {
+func round(a any) float64 {
 	return math.Round(toFloat(a))
 }
 
-func sum(numbers ...interface{}) float64 {
+func sum(numbers ...any) float64 {
 	var total float64
 	for _, n := range numbers {
 		total += toFloat(n)
@@ -519,7 +519,7 @@ func sum(numbers ...interface{}) float64 {
 	return total
 }
 
-func avg(numbers ...interface{}) float64 {
+func avg(numbers ...any) float64 {
 	if len(numbers) == 0 {
 		return 0
 	}

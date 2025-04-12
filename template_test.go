@@ -87,7 +87,7 @@ func TestRender(t *testing.T) {
 	tests := []struct {
 		name     string
 		template string
-		data     interface{}
+		data     any
 		layouts  []string
 		want     string
 		wantErr  bool
@@ -295,7 +295,7 @@ func TestDefaultFunctions(t *testing.T) {
 	tests := []struct {
 		name     string
 		template string
-		data     interface{}
+		data     any
 		expected string
 	}{
 		{
@@ -353,7 +353,7 @@ func TestDefaultFunctions(t *testing.T) {
 		{
 			name:     "join function / interface slice",
 			template: `{{ join "-" . }}`,
-			data:     []interface{}{"a", "b", "c"},
+			data:     []any{"a", "b", "c"},
 			expected: "a-b-c",
 		},
 		{
@@ -444,7 +444,7 @@ func TestTemplateFunctions(t *testing.T) {
 	tests := []struct {
 		name     string
 		template string
-		data     interface{}
+		data     any
 		expected string
 	}{
 		{
@@ -465,13 +465,13 @@ func TestTemplateFunctions(t *testing.T) {
 		{
 			name:     "len function with map",
 			template: `{{ len . }}`,
-			data:     map[string]interface{}{"a": 1, "b": 2},
+			data:     map[string]any{"a": 1, "b": 2},
 			expected: "2",
 		},
 		{
 			name:     "len function with slice",
 			template: `{{ len . }}`,
-			data:     []interface{}{1, 2, 3},
+			data:     []any{1, 2, 3},
 			expected: "3",
 		},
 		{
@@ -519,8 +519,8 @@ func TestDefaultValue(t *testing.T) {
 	tests := []struct {
 		name         string
 		template     string
-		data         interface{}
-		defaultValue interface{}
+		data         any
+		defaultValue any
 		expected     string
 	}{
 		{
@@ -532,7 +532,7 @@ func TestDefaultValue(t *testing.T) {
 		{
 			name:     "default with empty interface",
 			template: `{{ . | default "default" }}`,
-			data:     interface{}(nil),
+			data:     any(nil),
 			expected: "default",
 		},
 		{
@@ -619,7 +619,7 @@ func TestSafeFieldFunction(t *testing.T) {
 	tests := []struct {
 		name     string
 		template string
-		data     interface{}
+		data     any
 		expected string
 	}{
 		{

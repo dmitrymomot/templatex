@@ -18,7 +18,7 @@ func TestTemplateFunctions_Basic(t *testing.T) {
 	tests := []struct {
 		name     string
 		template string
-		data     interface{}
+		data     any
 		expected string
 	}{
 		// String manipulation tests

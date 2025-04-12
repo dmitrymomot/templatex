@@ -19,7 +19,7 @@ import (
 )
 
 var bufferPool = sync.Pool{
-	New: func() interface{} {
+	New: func() any {
 		return new(bytes.Buffer)
 	},
 }
@@ -90,6 +90,10 @@ func New(root string, opts ...Option) (*Engine, error) {
 		layouts: make(map[string]*template.Template),
 		funcMap: defaultFuncs(),
 		exts:    []string{".gohtml"},
+
+		cacheEnable:       false,
+		cache:             sync.Map{},
+		layoutCacheEnable: false,
 	}
 
 	// Apply options
@@ -217,7 +221,7 @@ func (e *Engine) getLayoutChain(layouts ...string) (*layoutChain, error) {
 //  4. Caches the final result for future use
 //
 // Returns an error if template execution fails or templates are not found.
-func (e *Engine) Render(ctx context.Context, out io.Writer, name string, binding interface{}, layouts ...string) error {
+func (e *Engine) Render(ctx context.Context, out io.Writer, name string, binding any, layouts ...string) error {
 	if e == nil || e.templates == nil {
 		return ErrTemplateEngineNotInitialized
 	}
@@ -228,14 +232,17 @@ func (e *Engine) Render(ctx context.Context, out io.Writer, name string, binding
 		locale = l.Code().String()
 	}
 
-	// Generate unique cache key
-	cacheKey := generateCacheKey(e.cacheEnable, locale, name, binding, layouts...)
+	var cacheKey string
+	if e.cacheEnable {
+		// Generate unique cache key
+		cacheKey = generateCacheKey(e.cacheEnable, locale, name, binding, layouts...)
 
-	// Try to get from cache first
-	if cached, ok := e.cache.Load(cacheKey); ok {
-		if cachedContent, ok := cached.(string); ok {
-			_, err := io.WriteString(out, cachedContent)
-			return err
+		// Try to get from cache first
+		if cached, ok := e.cache.Load(cacheKey); ok {
+			if cachedContent, ok := cached.(string); ok {
+				_, err := io.WriteString(out, cachedContent)
+				return err
+			}
 		}
 	}
 
@@ -293,8 +300,10 @@ func (e *Engine) Render(ctx context.Context, out io.Writer, name string, binding
 		content = buf.String()
 	}
 
-	// Store the final rendered content in cache
-	e.cache.Store(cacheKey, content)
+	if e.cacheEnable {
+		// Store the final rendered content in cache
+		e.cache.Store(cacheKey, content)
+	}
 
 	// Write final output
 	_, err = io.WriteString(out, content)
@@ -302,7 +311,7 @@ func (e *Engine) Render(ctx context.Context, out io.Writer, name string, binding
 }
 
 // generateCacheKey creates a unique cache key based on template name, layouts, and binding data
-func generateCacheKey(hardCache bool, locale, name string, binding interface{}, layouts ...string) string {
+func generateCacheKey(hardCache bool, locale, name string, binding any, layouts ...string) string {
 	baseKey := fmt.Sprintf("%s:%s:", locale, name)
 
 	// If hard caching is enabled, only use the template name and layouts
@@ -352,7 +361,7 @@ func generateCacheKey(hardCache bool, locale, name string, binding interface{}, 
 }
 
 // executeTemplateWithFuncs safely executes a template with additional functions
-func executeTemplateWithFuncs(tmpl *template.Template, buf *bytes.Buffer, data interface{}, fns template.FuncMap) error {
+func executeTemplateWithFuncs(tmpl *template.Template, buf *bytes.Buffer, data any, fns template.FuncMap) error {
 	// Create a new template
 	newTmpl, err := tmpl.Clone()
 	if err != nil {
@@ -381,7 +390,7 @@ func executeTemplateWithFuncs(tmpl *template.Template, buf *bytes.Buffer, data i
 // RenderString uses the underlying Render method but returns the result as a string
 // instead of writing to an io.Writer. It efficiently manages buffer allocation using
 // a sync.Pool to minimize memory allocations.
-func (e *Engine) RenderString(ctx context.Context, name string, binding interface{}, layouts ...string) (string, error) {
+func (e *Engine) RenderString(ctx context.Context, name string, binding any, layouts ...string) (string, error) {
 	buf := bufferPool.Get().(*bytes.Buffer)
 	buf.Reset()
 	defer bufferPool.Put(buf)
@@ -405,7 +414,7 @@ func (e *Engine) RenderString(ctx context.Context, name string, binding interfac
 // Returns:
 //   - template.HTML: The rendered template as a template.HTML type
 //   - error: Any error that occurred during rendering
-func (e *Engine) RenderHTML(ctx context.Context, name string, binding interface{}, layouts ...string) (template.HTML, error) {
+func (e *Engine) RenderHTML(ctx context.Context, name string, binding any, layouts ...string) (template.HTML, error) {
 	buf := bufferPool.Get().(*bytes.Buffer)
 	buf.Reset()
 	defer bufferPool.Put(buf)
