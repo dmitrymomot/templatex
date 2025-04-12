@@ -14,8 +14,6 @@ import (
 	"reflect"
 	"strings"
 	"sync"
-
-	"github.com/invopop/ctxi18n"
 )
 
 var bufferPool = sync.Pool{
@@ -39,6 +37,9 @@ type layoutChain struct {
 //   - Custom template function mapping
 //   - Support for multiple file extensions
 //   - Common layout precompilation
+// TranslatorFunc is a function type for translating strings
+type TranslatorFunc func(lang, key string, args ...string) string
+
 type Engine struct {
 	mu      sync.RWMutex
 	funcMap template.FuncMap
@@ -52,6 +53,7 @@ type Engine struct {
 	layouts           map[string]*template.Template // pre-compiled layout templates
 	layoutCache       sync.Map                      // layout chain cache
 	layoutCacheEnable bool                          // layout caching enabled
+	translator        TranslatorFunc                // translation function
 }
 
 // New creates a new template engine instance with optimized caching and pre-compiled layouts.
@@ -94,6 +96,7 @@ func New(root string, opts ...Option) (*Engine, error) {
 		cacheEnable:       false,
 		cache:             sync.Map{},
 		layoutCacheEnable: false,
+		translator:        defaultTranslator,
 	}
 
 	// Apply options
@@ -226,10 +229,13 @@ func (e *Engine) Render(ctx context.Context, out io.Writer, name string, binding
 		return ErrTemplateEngineNotInitialized
 	}
 
-	// Get locale from context
+	// Get locale from context (if available)
 	locale := "en"
-	if l := ctxi18n.Locale(ctx); l != nil {
-		locale = l.Code().String()
+	
+	// We still support getting locale from ctxi18n if present in the context
+	// This maintains backward compatibility
+	if l := ctx.Value("locale"); l != nil {
+		locale = fmt.Sprintf("%v", l)
 	}
 
 	var cacheKey string
@@ -262,7 +268,9 @@ func (e *Engine) Render(ctx context.Context, out io.Writer, name string, binding
 
 	// Create a new template with context-specific functions
 	contextFuncs := template.FuncMap{
-		"T":      getTranslator(ctx),
+		"T": func(key string, args ...string) string {
+			return e.translator(locale, key, args...)
+		},
 		"ctxVal": ctxValue(ctx),
 	}
 

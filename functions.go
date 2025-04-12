@@ -13,8 +13,6 @@ import (
 	"time"
 	"unicode"
 
-	"github.com/invopop/ctxi18n"
-	"github.com/invopop/ctxi18n/i18n"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 )
@@ -247,29 +245,12 @@ func contextValue(key string) string {
 	return ""
 }
 
-// getTranslator returns a translator function from context or falls back to returning the key
-func getTranslator(ctx context.Context) func(string, ...string) string {
-	l := ctxi18n.Locale(ctx)
-	if l == nil {
-		return func(key string, args ...string) string {
-			if len(args) == 0 {
-				return key
-			}
-			anyArgs := make([]any, len(args))
-			for i, v := range args {
-				anyArgs[i] = v
-			}
-			return fmt.Sprintf(key, anyArgs...)
-		}
-	}
-	return func(s string, a ...string) string {
-		argMap := make(i18n.M, len(a)/2)
-		for i := 0; i < len(a); i += 2 {
-			argMap[a[i]] = a[i+1]
-		}
-		return l.T(s, argMap)
-	}
+// defaultTranslator is a simple translator that returns the key itself
+func defaultTranslator(lang, key string, args ...string) string {
+	return key
 }
+
+
 
 // ctxValue returns the value of a key from a context
 // It returns an empty string if the key doesn't exist

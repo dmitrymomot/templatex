@@ -83,3 +83,24 @@ func WithLayoutCache(enabled bool) Option {
 		e.layoutCacheEnable = enabled
 	}
 }
+
+// WithTranslator sets a custom translation function for the template engine.
+// This allows you to integrate any translation system with the template engine.
+// If not provided, a default translator that simply returns the translation key
+// or formats it with provided arguments will be used.
+//
+// Example: 
+//
+//    engine, err := templatex.New("templates/",
+//        templatex.WithTranslator(func(ctx context.Context, key string, args ...string) string {
+//            // Implement your custom translation logic here
+//            return myTranslator.Translate(key, args...)
+//        }),
+//    )
+func WithTranslator(fn TranslatorFunc) Option {
+	return func(e *Engine) {
+		if fn != nil {
+			e.translator = fn
+		}
+	}
+}

@@ -1,15 +1,14 @@
 package main
 
 import (
+	"context"
 	"embed"
 	"errors"
 	"fmt"
-	"log/slog"
 	"net/http"
 
 	"github.com/dmitrymomot/templatex"
 	"github.com/go-chi/chi/v5"
-	"github.com/invopop/ctxi18n"
 )
 
 //go:embed *.yml
@@ -19,12 +18,12 @@ func main() {
 	r := chi.NewRouter()
 	r.Use(Localization("en"))
 
-	templ, _ := templatex.New("templates/", templatex.WithLayouts("app_layout", "base_layout"))
+	// No translation loading needed with the simplified approach
 
-	// Load translations
-	if err := ctxi18n.LoadWithDefault(translations, "en"); err != nil {
-		panic(err)
-	}
+	// Initialize template engine with default settings
+	templ, _ := templatex.New("templates/", 
+		templatex.WithLayouts("app_layout", "base_layout"),
+	)
 
 	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
 		data := struct {
@@ -52,8 +51,7 @@ func main() {
 // Localization middleware is responsible for handling request localization by
 // extracting the preferred language from the Accept-Language header and adding it
 // to the context. If no language preference is specified in the header, it falls
-// back to the provided default locale. The middleware uses ctxi18n package to
-// manage locale-specific functionality.
+// back to the provided default locale.
 func Localization(defaultLocale string) func(next http.Handler) http.Handler {
 	if defaultLocale == "" {
 		defaultLocale = "en"
@@ -66,12 +64,8 @@ func Localization(defaultLocale string) func(next http.Handler) http.Handler {
 				acceptLanguage = defaultLocale
 			}
 
-			// Add current language to the context
-			ctx, err := ctxi18n.WithLocale(r.Context(), acceptLanguage)
-			if err != nil {
-				ctx = r.Context()
-				slog.ErrorContext(ctx, "Failed to set locale", "error", err)
-			}
+			// Store the language directly in the context using 'locale' as the key
+			ctx := context.WithValue(r.Context(), "locale", acceptLanguage)
 
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
