@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"embed"
 	"errors"
 	"fmt"
 	"net/http"
@@ -11,8 +10,10 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-//go:embed *.yml
-var translations embed.FS
+// No translations embed needed
+
+// Use the LocaleContextKey from the main package
+var localeKey = templatex.ContextLocaleKey
 
 func main() {
 	r := chi.NewRouter()
@@ -64,8 +65,8 @@ func Localization(defaultLocale string) func(next http.Handler) http.Handler {
 				acceptLanguage = defaultLocale
 			}
 
-			// Store the language directly in the context using 'locale' as the key
-			ctx := context.WithValue(r.Context(), "locale", acceptLanguage)
+			// Store the language directly in the context using localeKey
+			ctx := context.WithValue(r.Context(), localeKey, acceptLanguage)
 
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})

@@ -2,17 +2,15 @@ package templatex_test
 
 import (
 	"context"
-	"embed"
 	"testing"
 
 	"github.com/dmitrymomot/templatex"
 )
 
-//go:embed example/*.yml
-var translations embed.FS
+// No translations embed needed
 
-// Use "locale" as the context key since that's what the template engine expects
-var localeKey = "locale"
+// Use the LocaleContextKey from the main package
+var localeKey = templatex.ContextLocaleKey
 
 // Create a simple benchmark translator that returns the key
 func benchmarkTranslator(lang, key string, args ...string) string {

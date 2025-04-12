@@ -40,6 +40,12 @@ type layoutChain struct {
 // TranslatorFunc is a function type for translating strings
 type TranslatorFunc func(lang, key string, args ...string) string
 
+// LocaleContextKey is a custom type for context keys to avoid SA1029 linter error
+type LocaleContextKey string
+
+// Define the locale key constant
+const ContextLocaleKey LocaleContextKey = "locale"
+
 type Engine struct {
 	mu      sync.RWMutex
 	funcMap template.FuncMap
@@ -234,7 +240,7 @@ func (e *Engine) Render(ctx context.Context, out io.Writer, name string, binding
 	
 	// We still support getting locale from ctxi18n if present in the context
 	// This maintains backward compatibility
-	if l := ctx.Value("locale"); l != nil {
+	if l := ctx.Value(ContextLocaleKey); l != nil {
 		locale = fmt.Sprintf("%v", l)
 	}
 

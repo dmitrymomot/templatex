@@ -15,7 +15,8 @@ import (
 )
 
 // We'll use "locale" as the context key since that's what the template engine expects
-var langKey = "locale"
+// Import the LocaleContextKey type from the main package
+var langKey = templatex.ContextLocaleKey
 
 func TestNew(t *testing.T) {
 	tests := []struct {
