@@ -11,10 +11,12 @@ import (
 	"testing"
 
 	"github.com/dmitrymomot/templatex"
-	"github.com/invopop/ctxi18n"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+// We'll use "locale" as the context key since that's what the template engine expects
+var langKey = "locale"
 
 //go:embed example/*.yml
 var testTranslations embed.FS
@@ -77,12 +79,10 @@ func TestRender(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, engine)
 
-	// Load translations
-	err = ctxi18n.LoadWithDefault(testTranslations, "en")
-	require.NoError(t, err)
+	// We no longer need to load translations from files
+	// since we're using a custom translator function
 
-	ctx, err := ctxi18n.WithLocale(context.Background(), "en")
-	require.NoError(t, err)
+	ctx := context.WithValue(context.Background(), langKey, "en")
 
 	tests := []struct {
 		name     string
@@ -148,11 +148,9 @@ func TestRenderString(t *testing.T) {
 	require.NoError(t, err)
 
 	// Load translations
-	err = ctxi18n.LoadWithDefault(testTranslations, "en")
-	require.NoError(t, err)
+	// No need to load translations anymore
 
-	ctx, err := ctxi18n.WithLocale(context.Background(), "en")
-	require.NoError(t, err)
+	ctx := context.WithValue(context.Background(), langKey, "en")
 
 	result, err := engine.RenderString(ctx, "greeter", pageData{
 		Title:    "Test",
@@ -169,11 +167,9 @@ func TestRenderHTML(t *testing.T) {
 	require.NoError(t, err)
 
 	// Load translations
-	err = ctxi18n.LoadWithDefault(testTranslations, "en")
-	require.NoError(t, err)
+	// No need to load translations anymore
 
-	ctx, err := ctxi18n.WithLocale(context.Background(), "en")
-	require.NoError(t, err)
+	ctx := context.WithValue(context.Background(), langKey, "en")
 
 	result, err := engine.RenderHTML(ctx, "greeter", pageData{
 		Title:    "Test",
@@ -248,11 +244,9 @@ func TestConcurrentRendering(t *testing.T) {
 	require.NoError(t, err)
 
 	// Load translations
-	err = ctxi18n.LoadWithDefault(testTranslations, "en")
-	require.NoError(t, err)
+	// No need to load translations anymore
 
-	ctx, err := ctxi18n.WithLocale(context.Background(), "en")
-	require.NoError(t, err)
+	ctx := context.WithValue(context.Background(), langKey, "en")
 
 	data := pageData{
 		Title:    "Test",
@@ -705,11 +699,20 @@ func TestPrintIfFunctions(t *testing.T) {
 }
 
 func TestTemplateCache(t *testing.T) {
+	// Create a custom translator that returns username in the greeting
+	customTranslator := func(lang, key string, args ...string) string {
+		if key == "greeting" {
+			return "John"
+		}
+		return key
+	}
+
 	engine, err := templatex.New("example/templates/",
 		templatex.WithExtensions(".gohtml"),
 		templatex.WithHardCache(true),
 		templatex.WithLayouts("base_layout"),
 		templatex.WithLayoutCache(true),
+		templatex.WithTranslator(customTranslator),
 	)
 	require.NoError(t, err)
 	require.NotNil(t, engine)
@@ -746,13 +749,46 @@ func TestTemplateCache(t *testing.T) {
 
 func TestTranslationInLayout(t *testing.T) {
 	// Setup test environment
-	engine, err := templatex.New("example/templates/", templatex.WithExtensions(".gohtml"))
+	
+	// Create a custom translator that uses ctxi18n
+	customTranslator := func(lang, key string, args ...string) string {
+		// Create map of expected translations for testing
+		translations := map[string]map[string]string{
+			"en": {
+				"layout.title":  "Test Title",
+				"layout.header": "Test Header",
+				"layout.footer": "Test Footer",
+				"greeting":      "Hello, John",
+				"welcome":       "Welcome to our awesome app!",
+			},
+			"es": {
+				"layout.title":  "Título de Prueba",
+				"layout.header": "Encabezado de Prueba",
+				"layout.footer": "Pie de Página de Prueba",
+				"greeting":      "Hola, John",
+				"welcome":       "¡Bienvenido a nuestra increíble aplicación!",
+			},
+		}
+		
+		// Return translation based on language and key
+		if langTranslations, ok := translations[lang]; ok {
+			if translation, ok := langTranslations[key]; ok {
+				return translation
+			}
+		}
+		
+		// Default fallback
+		return key
+	}
+	
+	engine, err := templatex.New("example/templates/", 
+		templatex.WithExtensions(".gohtml"),
+		templatex.WithTranslator(customTranslator),
+	)
 	require.NoError(t, err)
 	require.NotNil(t, engine)
 
-	// Load translations
-	err = ctxi18n.LoadWithDefault(testTranslations, "en")
-	require.NoError(t, err)
+	// No need to load translations anymore - we use a custom translator
 
 	// Test cases for different languages
 	tests := []struct {
@@ -786,9 +822,8 @@ func TestTranslationInLayout(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Create context with locale
-			ctx, err := ctxi18n.WithLocale(context.Background(), tt.locale)
-			require.NoError(t, err)
+			// Create context with locale key to store language
+			ctx := context.WithValue(context.Background(), langKey, tt.locale)
 
 			// Render the template with the trans_layout
 			var buf bytes.Buffer
